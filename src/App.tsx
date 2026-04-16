@@ -1,15 +1,12 @@
 import './App.css';
-import TodoList from './components/todo-list/TodoList';
+import JeopardyTable from './components/jeopardy-table/JeopardyTable';
 
 function App() {
   return (
     <>
-      <section id="center">
-        <TodoList />
+      <section style={{ padding: 16 }}>
+        <JeopardyTable />
       </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
     </>
   );
 }
