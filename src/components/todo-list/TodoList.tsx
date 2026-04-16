@@ -18,8 +18,17 @@ export default function TodoList() {
     setTodos([...todos, todo]);
   }
 
+  function handleToggleTodo(id: number) {
+    setTodos((prevTodos) =>
+      prevTodos.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      )
+    );
+  }
+
   return (
     <>
+      
       <input
         type="text"
         onChange={(e) =>
@@ -27,15 +36,23 @@ export default function TodoList() {
         }
       />
       <button
-        onClick={() =>
-          handleAddTodo({ id: todos.length + 1, text: newTodo.text, completed: false })
-        }
+        onClick={() => {
+          if (!newTodo) return;
+          handleAddTodo({ id: todos.length + 1, text: newTodo.text, completed: false });
+        }}
       >
         Add
       </button>
       <ul>
         {todos.map((todo) => (
-          <li key={todo.id}>{todo.text}</li>
+          <li key={todo.id}>
+            <input
+              type="checkbox"
+              checked={todo.completed}
+              onChange={() => handleToggleTodo(todo.id)}
+            />
+            {todo.text}
+          </li>
         ))}
       </ul>
     </>
