@@ -7,16 +7,32 @@ export type QuestionDialogData = {
   category: string;
   question: string;
   price: number;
+  answer: string;
 };
 
 type QuestionDialogProps = {
   question: QuestionDialogData | null;
+  isOpen: boolean;
   onClose: () => void;
+  disableBackdropClose?: boolean;
 };
 
-export default function QuestionDialog({ question, onClose }: QuestionDialogProps) {
+export default function QuestionDialog({
+  question,
+  isOpen,
+  onClose,
+  disableBackdropClose = false,
+}: QuestionDialogProps) {
+  const handleClose = (_event: object, reason: 'backdropClick' | 'escapeKeyDown') => {
+    if (disableBackdropClose && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
+      return;
+    }
+
+    onClose();
+  };
+
   return (
-    <Dialog open={Boolean(question)} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={isOpen} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>{question?.category}</DialogTitle>
       <DialogContent>
         <Typography variant="body1">{question?.question}</Typography>

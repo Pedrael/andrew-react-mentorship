@@ -6,71 +6,102 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import QuestionDialog from '../question-dialog/QuestionDialog';
+import type { QuestionDialogData } from '../question-dialog/QuestionDialog';
 import questionsJson from '../../data/questions.json';
-import QuestionDialog from './QuestionDialog';
 
 type Question = {
-  category: string;
-  question: string;
   price: number;
+  question: string;
+  answer: string;
 };
+
+type Category = {
+  title: string;
+  questions: Question[];
+};
+
+type QuestionsJsonShape = {
+  categories: Category[];
+};
+
+type FlatQuestion = QuestionDialogData;
 
 type JeopardyTableProps = {
-  questions?: Question[];
-  onQuestionClick?: (question: Question) => void;
+  categories?: Category[];
+  onQuestionClick?: (question: FlatQuestion) => void;
 };
 
-export default function JeopardyTable({ questions, onQuestionClick }: JeopardyTableProps) {
-  const [selectedQuestion, setSelectedQuestion] = React.useState<Question | null>(null);
-  type QuestionsJsonShape = { questions: Question[] };
+export default function JeopardyTable({ categories: categoriesProp }: JeopardyTableProps) {
+  const [selectedQuestion, setSelectedQuestion] = React.useState<QuestionDialogData | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
+  const dialogCloseTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const questionList = React.useMemo(() => {
-    const fromJson = (questionsJson as QuestionsJsonShape | undefined)?.questions ?? [];
-    return questions ?? fromJson;
-  }, [questions]);
+  const categoriesData = React.useMemo(() => {
+    const fromJson = (questionsJson as QuestionsJsonShape | undefined)?.categories ?? [];
+    return categoriesProp ?? fromJson;
+  }, [categoriesProp]);
 
-  // Preserve first-seen order for categories.
   const categories = React.useMemo(() => {
-    const seen = new Set<string>();
-    const result: string[] = [];
-    for (const q of questionList) {
-      if (seen.has(q.category)) continue;
-      seen.add(q.category);
-      result.push(q.category);
-    }
-    return result;
-  }, [questionList]);
+    return categoriesData.map((category) => category.title);
+  }, [categoriesData]);
 
-  // Header cells are the prices (sorted numerically).
   const prices = React.useMemo(() => {
     const seen = new Set<number>();
     const result: number[] = [];
-    for (const q of questionList) {
-      if (seen.has(q.price)) continue;
-      seen.add(q.price);
-      result.push(q.price);
+
+    for (const category of categoriesData) {
+      for (const q of category.questions) {
+        if (seen.has(q.price)) continue;
+        seen.add(q.price);
+        result.push(q.price);
+      }
     }
+
     result.sort((a, b) => a - b);
     return result;
-  }, [questionList]);
+  }, [categoriesData]);
 
   const questionMap = React.useMemo(() => {
-    const map = new Map<string, Question>();
-    for (const q of questionList) {
-      map.set(`${q.category}::${q.price}`, q);
+    const map = new Map<string, QuestionDialogData>();
+
+    for (const category of categoriesData) {
+      for (const q of category.questions) {
+        map.set(`${category.title}::${q.price}`, {
+          ...q,
+          category: category.title,
+        });
+      }
     }
+
     return map;
-  }, [questionList]);
+  }, [categoriesData]);
 
-  function handleCellClick(question: Question | undefined, isDisabled: boolean) {
-    if (!question || isDisabled) return;
-    setSelectedQuestion(question);
-    onQuestionClick?.(question);
-  }
+  const onCellClick = (cellData: QuestionDialogData) => {
+    setSelectedQuestion(cellData);
+    setIsDialogOpen(true);
+  };
 
-  function handleCloseModal() {
-    setSelectedQuestion(null);
-  }
+  const onDialogClose = () => {
+    if (dialogCloseTimeoutRef.current) {
+      clearTimeout(dialogCloseTimeoutRef.current);
+    }
+
+    dialogCloseTimeoutRef.current = setTimeout(() => {
+      setSelectedQuestion(null);
+      dialogCloseTimeoutRef.current = null;
+    }, 100);
+
+    setIsDialogOpen(false);
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (dialogCloseTimeoutRef.current) {
+        clearTimeout(dialogCloseTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -86,15 +117,15 @@ export default function JeopardyTable({ questions, onQuestionClick }: JeopardyTa
               ))}
             </TableRow>
           </TableHead>
-
           <TableBody>
             {categories.map((category) => (
               <TableRow key={category}>
                 <TableCell sx={{ fontWeight: 700 }}>{category}</TableCell>
-
                 {prices.map((price) => {
-                  const q = questionMap.get(`${category}::${price}`);
-                  const isDisabled = !q;
+                  const cellQuestion: QuestionDialogData | undefined = questionMap.get(
+                    `${category}::${price}`,
+                  );
+                  const isDisabled = !cellQuestion;
 
                   return (
                     <TableCell
@@ -106,16 +137,18 @@ export default function JeopardyTable({ questions, onQuestionClick }: JeopardyTa
                         whiteSpace: 'normal',
                         borderRight: '1px solid rgba(224, 224, 224, 1)',
                         opacity: isDisabled ? 0.45 : 1,
-                        cursor: isDisabled ? 'default' : 'pointer',
+                        cursor: 'pointer',
                         userSelect: 'none',
-                        // Gives each clue cell a consistent "board" feel.
                         height: 64,
                         paddingTop: 1,
                         paddingBottom: 1,
                       }}
-                      onClick={() => handleCellClick(q, isDisabled)}
+                      onClick={() => {
+                        if (!cellQuestion) return;
+                        onCellClick(cellQuestion);
+                      }}
                     >
-                    {q ? `$${price}` : ''}
+                      {cellQuestion?.price ?? ''}
                     </TableCell>
                   );
                 })}
@@ -125,7 +158,12 @@ export default function JeopardyTable({ questions, onQuestionClick }: JeopardyTa
         </Table>
       </TableContainer>
 
-      <QuestionDialog question={selectedQuestion} onClose={handleCloseModal} />
+      <QuestionDialog
+        question={selectedQuestion}
+        isOpen={isDialogOpen}
+        onClose={onDialogClose}
+        disableBackdropClose
+      />
     </>
   );
 }
