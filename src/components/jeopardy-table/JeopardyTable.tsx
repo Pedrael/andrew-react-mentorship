@@ -7,6 +7,7 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import questionsJson from '../../data/questions.json';
+import QuestionDialog from './QuestionDialog';
 
 type Question = {
   category: string;
@@ -20,6 +21,7 @@ type JeopardyTableProps = {
 };
 
 export default function JeopardyTable({ questions, onQuestionClick }: JeopardyTableProps) {
+  const [selectedQuestion, setSelectedQuestion] = React.useState<Question | null>(null);
   type QuestionsJsonShape = { questions: Question[] };
 
   const questionList = React.useMemo(() => {
@@ -60,59 +62,70 @@ export default function JeopardyTable({ questions, onQuestionClick }: JeopardyTa
     return map;
   }, [questionList]);
 
+  function handleCellClick(question: Question | undefined, isDisabled: boolean) {
+    if (!question || isDisabled) return;
+    setSelectedQuestion(question);
+    onQuestionClick?.(question);
+  }
+
+  function handleCloseModal() {
+    setSelectedQuestion(null);
+  }
+
   return (
-    <TableContainer component={Paper} sx={{ maxWidth: 1100 }}>
-      <Table aria-label="Jeopardy board">
-        <TableHead>
-          <TableRow>
-            <TableCell sx={{ width: 180, fontWeight: 700 }}>Categories</TableCell>
-            {prices.map((price) => (
-              <TableCell key={price} align="center" sx={{ fontWeight: 700 }}>
-                {`$${price}`}
-              </TableCell>
-            ))}
-          </TableRow>
-        </TableHead>
-
-        <TableBody>
-          {categories.map((category) => (
-            <TableRow key={category}>
-              <TableCell sx={{ fontWeight: 700 }}>{category}</TableCell>
-
-              {prices.map((price) => {
-                const q = questionMap.get(`${category}::${price}`);
-                const isDisabled = !q;
-
-                return (
-                  <TableCell
-                    key={`${category}::${price}`}
-                    align="center"
-                    sx={{
-                      verticalAlign: 'top',
-                      wordBreak: 'break-word',
-                      whiteSpace: 'normal',
-                      borderRight: '1px solid rgba(224, 224, 224, 1)',
-                      opacity: isDisabled ? 0.45 : 1,
-                      cursor: isDisabled || !onQuestionClick ? 'default' : 'pointer',
-                      userSelect: 'none',
-                      // Gives each clue cell a consistent "board" feel.
-                      height: 64,
-                      paddingTop: 1,
-                      paddingBottom: 1,
-                    }}
-                    onClick={() => {
-                      if (!q || isDisabled) return;
-                      onQuestionClick?.(q);
-                    }}
-                  >
-                    {q?.question ?? ''}
-                  </TableCell>
-                );
-              })}
+    <>
+      <TableContainer component={Paper} sx={{ maxWidth: 1100 }}>
+        <Table aria-label="Jeopardy board">
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ width: 180, fontWeight: 700 }}>Categories</TableCell>
+              {prices.map((price) => (
+                <TableCell key={price} align="center" sx={{ fontWeight: 700 }}>
+                  {`$${price}`}
+                </TableCell>
+              ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+
+          <TableBody>
+            {categories.map((category) => (
+              <TableRow key={category}>
+                <TableCell sx={{ fontWeight: 700 }}>{category}</TableCell>
+
+                {prices.map((price) => {
+                  const q = questionMap.get(`${category}::${price}`);
+                  const isDisabled = !q;
+
+                  return (
+                    <TableCell
+                      key={`${category}::${price}`}
+                      align="center"
+                      sx={{
+                        verticalAlign: 'top',
+                        wordBreak: 'break-word',
+                        whiteSpace: 'normal',
+                        borderRight: '1px solid rgba(224, 224, 224, 1)',
+                        opacity: isDisabled ? 0.45 : 1,
+                        cursor: isDisabled ? 'default' : 'pointer',
+                        userSelect: 'none',
+                        // Gives each clue cell a consistent "board" feel.
+                        height: 64,
+                        paddingTop: 1,
+                        paddingBottom: 1,
+                      }}
+                      onClick={() => handleCellClick(q, isDisabled)}
+                    >
+                    {q ? `$${price}` : ''}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <QuestionDialog question={selectedQuestion} onClose={handleCloseModal} />
+    </>
   );
 }
