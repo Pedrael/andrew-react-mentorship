@@ -1,4 +1,6 @@
+import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
@@ -37,6 +39,11 @@ export default function QuestionDialog({
       <DialogContent>
         <Typography variant="body1">{question?.question}</Typography>
       </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} variant="contained">
+          Close
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 }
