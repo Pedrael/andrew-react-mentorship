@@ -4,6 +4,8 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
+import { GameContext } from '../../context/GameContext';
+import { useContext } from 'react';
 
 export type QuestionDialogData = {
   category: string;
@@ -25,6 +27,14 @@ export default function QuestionDialog({
   onClose,
   disableBackdropClose = false,
 }: QuestionDialogProps) {
+  const game = useContext(GameContext);
+
+  if (!game) {
+    throw new Error('SelectPlayer must be used inside GameProvider');
+  }
+
+  const { players, findSelectedPlayer, addScore, subtractScore } = game;
+
   const handleClose = (_event: object, reason: 'backdropClick' | 'escapeKeyDown') => {
     if (disableBackdropClose && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
       return;
