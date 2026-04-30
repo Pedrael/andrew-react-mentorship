@@ -22,9 +22,9 @@ export type FlatQuestion = Question & {
   category: string;
 };
 
-type GameContextValue = {
+export type GameContextValue = {
   players: Player[];
-  findSelectedPlayer: (playerId: string) => void;
+  findSelectedPlayer: (playerId: string) => Player | undefined;
   addScore: (playerId: string, points: number) => void;
   subtractScore: (playerId: string, points: number) => void;
   resetScores: () => void;
@@ -35,6 +35,7 @@ type GameProviderProps = {
   children: ReactNode;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const GameContext = createContext<GameContextValue | null>(null);
 const initialPlayers: Player[] = [
   {

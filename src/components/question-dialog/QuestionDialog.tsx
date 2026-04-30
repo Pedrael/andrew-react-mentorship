@@ -30,10 +30,12 @@ export default function QuestionDialog({
   const game = useContext(GameContext);
 
   if (!game) {
-    throw new Error('SelectPlayer must be used inside GameProvider');
+    throw new Error('QuestionDialog must be used inside GameProvider');
   }
 
-  const { players, findSelectedPlayer, addScore, subtractScore } = game;
+  const { players, addScore, subtractScore } = game;
+  const selectedPlayer = players.find((player) => player.isSelected);
+  const scoreDelta = question?.price ?? 0;
 
   const handleClose = (_event: object, reason: 'backdropClick' | 'escapeKeyDown') => {
     if (disableBackdropClose && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
@@ -42,14 +44,36 @@ export default function QuestionDialog({
 
     onClose();
   };
+  const handleAddScore = () => {
+    if (!selectedPlayer || !question) return;
+    addScore(selectedPlayer.id, scoreDelta);
+    onClose();
+  };
+
+  const handleSubtractScore = () => {
+    if (!selectedPlayer || !question) return;
+    subtractScore(selectedPlayer.id, scoreDelta);
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>{question?.category}</DialogTitle>
       <DialogContent>
         <Typography variant="body1">{question?.question}</Typography>
+        {!selectedPlayer && (
+          <Typography variant="caption" color="error">
+            Select a player before applying score.
+          </Typography>
+        )}
       </DialogContent>
       <DialogActions>
+        <Button onClick={handleSubtractScore} variant="outlined" color="error" disabled={!selectedPlayer || !question}>
+          -{scoreDelta}
+        </Button>
+        <Button onClick={handleAddScore} variant="contained" color="success" disabled={!selectedPlayer || !question}>
+          +{scoreDelta}
+        </Button>
         <Button onClick={onClose} variant="contained">
           Close
         </Button>
