@@ -24,6 +24,8 @@ export type FlatQuestion = Question & {
 
 export type GameContextValue = {
   players: Player[];
+  addPlayer: (player: Player) => void;
+  deletePlayer: (playerId: string) => void;
   findSelectedPlayer: (playerId: string) => Player | undefined;
   addScore: (playerId: string, points: number) => void;
   subtractScore: (playerId: string, points: number) => void;
@@ -54,6 +56,14 @@ const initialPlayers: Player[] = [
 
 export function GameProvider({ children }: GameProviderProps) {
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
+  const addPlayer = (player: Player) => {
+    setPlayers((prevPlayers) => [...prevPlayers, player]);
+  };
+
+  const deletePlayer = (playerId: string) => {
+    setPlayers((prevPlayers) => prevPlayers.filter((player) => player.id !== playerId));
+  };
+
   const addScore = (playerId: string, points: number) => {
     setPlayers((prevPlayers) =>
       prevPlayers.map((player) =>
@@ -108,6 +118,8 @@ export function GameProvider({ children }: GameProviderProps) {
     <GameContext.Provider
       value={{
         players,
+        addPlayer,
+        deletePlayer,
         findSelectedPlayer,
         addScore,
         subtractScore,

@@ -13,6 +13,7 @@ import questionsJson from '../../data/questions.json';
 type Question = {
   price: number;
   question: string;
+  image?: string;
   answer: string;
 };
 

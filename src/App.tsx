@@ -1,7 +1,7 @@
 import './App.css';
 import JeopardyTable from './components/jeopardy-table/JeopardyTable';
-import ScoreBoard from './components/score-board/ScoreBoard';
-import SelectPlayer from './components/select-player/SelectPlayer';
+import PlayerManagementForm from './components/player-management-form/PlayerManagementForm';
+
 import { GameProvider } from './context/GameContext';
 
 function App() {
@@ -9,8 +9,7 @@ function App() {
     <GameProvider>
       <section style={{ padding: 16 }}>
         <JeopardyTable />
-        <SelectPlayer />
-        <ScoreBoard />
+        <PlayerManagementForm />
       </section>
     </GameProvider>
   );
