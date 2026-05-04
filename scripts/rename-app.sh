@@ -23,15 +23,20 @@ const path = require('path');
 
 const [projectRoot, packageName, appTitle] = process.argv.slice(2);
 
-const packageJsonPath = path.join(projectRoot, 'package.json');
-if (fs.existsSync(packageJsonPath)) {
+const packageJsonPaths = [
+  path.join(projectRoot, 'client', 'package.json'),
+  path.join(projectRoot, 'server', 'package.json'),
+];
+for (const packageJsonPath of packageJsonPaths) {
+  if (!fs.existsSync(packageJsonPath)) continue;
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  packageJson.name = packageName;
+  const suffix = packageJsonPath.includes(`${path.sep}server${path.sep}`) ? '-server' : '';
+  packageJson.name = `${packageName}${suffix}`;
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
-  console.log(`Updated package name to: ${packageName}`);
+  console.log(`Updated package name in ${path.relative(projectRoot, packageJsonPath)} to: ${packageJson.name}`);
 }
 
-const indexHtmlPath = path.join(projectRoot, 'index.html');
+const indexHtmlPath = path.join(projectRoot, 'client', 'index.html');
 if (fs.existsSync(indexHtmlPath)) {
   const html = fs.readFileSync(indexHtmlPath, 'utf8');
   const nextHtml = html.replace(/<title>.*?<\/title>/s, `<title>${appTitle}</title>`);
