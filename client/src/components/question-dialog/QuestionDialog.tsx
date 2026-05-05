@@ -18,6 +18,7 @@ export type QuestionDialogData = {
 
 type QuestionDialogProps = {
   question: QuestionDialogData | null;
+  isAdmin: boolean;
   isOpen: boolean;
   onClose: () => void;
   disableBackdropClose?: boolean;
@@ -26,6 +27,7 @@ type QuestionDialogProps = {
 
 export default function QuestionDialog({
   question,
+  isAdmin = false,
   isOpen,
   onClose,
   disableBackdropClose = false,
@@ -42,6 +44,7 @@ export default function QuestionDialog({
   const scoreDelta = question?.price ?? 0;
   const wrongAnswerPenalty = 100;
   const [isChoosingAuctionWinner, setIsChoosingAuctionWinner] = useState(false);
+  const [isRevealingAnswer, setIsRevealingAnswer] = useState(false);
 
   const handleClose = (_event: object, reason: 'backdropClick' | 'escapeKeyDown') => {
     if (disableBackdropClose && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
@@ -50,11 +53,11 @@ export default function QuestionDialog({
 
     onClose();
   };
-  const handleAddScore = () => {
+  const handleRevealAnswer = () => {
     if (!selectedPlayer || !question) return;
+    setIsRevealingAnswer(true);
     addScore(selectedPlayer.id, scoreDelta);
     onQuestionAnswered?.(question);
-    onClose();
   };
 
   const handleSubtractScore = () => {
@@ -78,7 +81,9 @@ export default function QuestionDialog({
 
   useEffect(() => {
     if (!isOpen) {
-      setIsChoosingAuctionWinner(false);
+      setTimeout(() => {
+        setIsChoosingAuctionWinner(false);
+      }, 0);
     }
   }, [isOpen]);
 
@@ -123,21 +128,26 @@ export default function QuestionDialog({
             style={{ maxWidth: '100%', marginTop: 12, borderRadius: 8 }}
           />
         )}
+        {(isAdmin || isRevealingAnswer) && (
+          <Typography variant="subtitle2" sx={{ mt: 1.5 }}>
+            Answer: {question?.answer}
+          </Typography>
+        )}
       </DialogContent>
       <DialogActions>
         <Button
           onClick={handleSubtractScore}
           variant="outlined"
           color="error"
-          disabled={!selectedPlayer || !question || isChoosingAuctionWinner}
+          disabled={!selectedPlayer || !question || isChoosingAuctionWinner || isRevealingAnswer}
         >
           -{wrongAnswerPenalty}
         </Button>
         <Button
-          onClick={handleAddScore}
+          onClick={handleRevealAnswer}
           variant="contained"
           color="success"
-          disabled={!selectedPlayer || !question || isChoosingAuctionWinner}
+          disabled={!selectedPlayer || !question || isChoosingAuctionWinner || isRevealingAnswer}
         >
           +{scoreDelta}
         </Button>

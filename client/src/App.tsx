@@ -1,16 +1,16 @@
-import './App.css';
-import JeopardyTable from './components/jeopardy-table/JeopardyTable';
-import PlayerManagementForm from './components/player-management-form/PlayerManagementForm';
-
+import { Routes, Route, Navigate } from 'react-router-dom';
+import AdminLayout from './layouts/AdminLayout';
+import PlayerLayout from './layouts/PlayerLayout';
 import { GameProvider } from './context/GameContext';
 
 function App() {
   return (
     <GameProvider>
-      <section style={{ padding: 16 }}>
-        <JeopardyTable />
-        <PlayerManagementForm />
-      </section>
+      <Routes>
+        <Route path="/" element={<Navigate to="/admin" replace />} />
+        <Route path="/admin" element={<AdminLayout />} />
+        <Route path="/player" element={<PlayerLayout />} />
+      </Routes>
     </GameProvider>
   );
 }

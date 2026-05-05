@@ -44,7 +44,7 @@ const initialPlayers: Player[] = [
     id: 'player-1',
     name: 'Player 1',
     score: 0,
-    isSelected: false,
+    isSelected: true,
   },
   {
     id: 'player-2',

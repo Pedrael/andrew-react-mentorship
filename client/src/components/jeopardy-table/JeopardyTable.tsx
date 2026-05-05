@@ -30,11 +30,15 @@ type QuestionsJsonShape = {
 type FlatQuestion = QuestionDialogData;
 
 type JeopardyTableProps = {
+  isAdmin: boolean;
   categories?: Category[];
   onQuestionClick?: (question: FlatQuestion) => void;
 };
 
-export default function JeopardyTable({ categories: categoriesProp }: JeopardyTableProps) {
+export default function JeopardyTable({
+  categories: categoriesProp,
+  isAdmin = false,
+}: JeopardyTableProps) {
   const [selectedQuestion, setSelectedQuestion] = React.useState<QuestionDialogData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
   const [answeredQuestionKeys, setAnsweredQuestionKeys] = React.useState<Set<string>>(new Set());
@@ -148,9 +152,7 @@ export default function JeopardyTable({ categories: categoriesProp }: JeopardyTa
                 <TableCell sx={{ fontWeight: 700 }}>{category}</TableCell>
                 {prices.map((price) => {
                   const questionKey = `${category}::${price}`;
-                  const cellQuestion: QuestionDialogData | undefined = questionMap.get(
-                    questionKey,
-                  );
+                  const cellQuestion: QuestionDialogData | undefined = questionMap.get(questionKey);
                   const isDisabled =
                     !cellQuestion ||
                     Boolean(cellQuestion.isAnswered) ||
@@ -189,6 +191,7 @@ export default function JeopardyTable({ categories: categoriesProp }: JeopardyTa
 
       <QuestionDialog
         question={selectedQuestion}
+        isAdmin={isAdmin}
         isOpen={isDialogOpen}
         onClose={onDialogClose}
         onQuestionAnswered={onQuestionAnswered}
