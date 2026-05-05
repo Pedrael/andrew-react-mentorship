@@ -7,17 +7,20 @@
           "price": 100,
           "question": "What is the process plants use to convert sunlight into chemical energy?",
           "image": "https://img.magnific.com/premium-photo/cute-white-baby-rabbit-meadow-green-grass-friendship-with-cute-easter-bunny_7186-3508.jpg?w=2000",
-          "answer": "Photosynthesis"
+          "answer": "Photosynthesis",
+          "isAnswered": false
         },
         {
           "price": 200,
           "question": "What do you call the force that accelerates objects due to mass pulling them together?",
-          "answer": "Gravity"
+          "answer": "Gravity",
+          "isAnswered": false
         },
         {
           "price": 300,
           "question": "What is the name of the subatomic particle with a negative electric charge?",
-          "answer": "Electron"
+          "answer": "Electron",
+          "isAnswered": false
         }
       ]
     },
@@ -27,17 +30,20 @@
         {
           "price": 100,
           "question": "Which ancient civilization built the pyramids at Giza?",
-          "answer": "Ancient Egyptians"
+          "answer": "Ancient Egyptians",
+          "isAnswered": false
         },
         {
           "price": 200,
           "question": "Who was the leader of the French Revolution for most of its most turbulent period?",
-          "answer": "Maximilien Robespierre"
+          "answer": "Maximilien Robespierre",
+          "isAnswered": false
         },
         {
           "price": 300,
           "question": "The Silk Road was a network of trade routes connecting which regions?",
-          "answer": "Asia, Europe, and the Middle East"
+          "answer": "Asia, Europe, and the Middle East",
+          "isAnswered": false
         }
       ]
     },
@@ -47,17 +53,20 @@
         {
           "price": 100,
           "question": "How many players are on the field for one soccer team at a time?",
-          "answer": "11"
+          "answer": "11",
+          "isAnswered": false
         },
         {
           "price": 200,
           "question": "In tennis, what is the term for winning a point when the score is 40-40?",
-          "answer": "Deuce"
+          "answer": "Deuce",
+          "isAnswered": false
         },
         {
           "price": 300,
           "question": "What is the name of the sport where you score by tossing rings onto a stake?",
-          "answer": "Ring toss"
+          "answer": "Ring toss",
+          "isAnswered": false
         }
       ]
     },
@@ -67,17 +76,20 @@
         {
           "price": 100,
           "question": "What do you call the person who writes the screenplay?",
-          "answer": "Screenwriter"
+          "answer": "Screenwriter",
+          "isAnswered": false
         },
         {
           "price": 200,
           "question": "Which film genre typically features stories about space exploration and futuristic technology?",
-          "answer": "Science fiction"
+          "answer": "Science fiction",
+          "isAnswered": false
         },
         {
           "price": 300,
           "question": "In filmmaking, what is the term for a series of drawings or images that create the illusion of motion?",
-          "answer": "Animation"
+          "answer": "Animation",
+          "isAnswered": false
         }
       ]
     }

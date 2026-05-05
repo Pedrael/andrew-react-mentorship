@@ -4,7 +4,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
-import { useContext } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { GameContext } from '../../context/GameContext';
 
 export type QuestionDialogData = {
@@ -13,6 +13,7 @@ export type QuestionDialogData = {
   price: number;
   answer: string;
   image?: string;
+  isAnswered?: boolean;
 };
 
 type QuestionDialogProps = {
@@ -20,6 +21,7 @@ type QuestionDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   disableBackdropClose?: boolean;
+  onQuestionAnswered?: (question: QuestionDialogData) => void;
 };
 
 export default function QuestionDialog({
@@ -27,6 +29,7 @@ export default function QuestionDialog({
   isOpen,
   onClose,
   disableBackdropClose = false,
+  onQuestionAnswered,
 }: QuestionDialogProps) {
   const game = useContext(GameContext);
 
@@ -37,6 +40,8 @@ export default function QuestionDialog({
   const { players, addScore, subtractScore } = game;
   const selectedPlayer = players.find((player) => player.isSelected);
   const scoreDelta = question?.price ?? 0;
+  const wrongAnswerPenalty = 100;
+  const [isChoosingAuctionWinner, setIsChoosingAuctionWinner] = useState(false);
 
   const handleClose = (_event: object, reason: 'backdropClick' | 'escapeKeyDown') => {
     if (disableBackdropClose && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
@@ -48,14 +53,34 @@ export default function QuestionDialog({
   const handleAddScore = () => {
     if (!selectedPlayer || !question) return;
     addScore(selectedPlayer.id, scoreDelta);
+    onQuestionAnswered?.(question);
     onClose();
   };
 
   const handleSubtractScore = () => {
     if (!selectedPlayer || !question) return;
-    subtractScore(selectedPlayer.id, scoreDelta);
+    subtractScore(selectedPlayer.id, wrongAnswerPenalty);
+    setIsChoosingAuctionWinner(true);
+  };
+
+  const handleAuctionWinnerAddScore = (playerId: string) => {
+    if (!question) return;
+    addScore(playerId, scoreDelta);
+    onQuestionAnswered?.(question);
     onClose();
   };
+
+  const handleAuctionNoWinner = () => {
+    if (!question) return;
+    onQuestionAnswered?.(question);
+    onClose();
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsChoosingAuctionWinner(false);
+    }
+  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -66,6 +91,29 @@ export default function QuestionDialog({
           <Typography variant="caption" color="error">
             Select a player before applying score.
           </Typography>
+        )}
+        {isChoosingAuctionWinner && (
+          <>
+            <Typography variant="subtitle2" sx={{ mt: 1.5 }}>
+              Wrong answer: -{wrongAnswerPenalty} applied. Choose player to get +{scoreDelta}, or no
+              one.
+            </Typography>
+            {players.map((player) => (
+              <Button
+                key={player.id}
+                onClick={() => {
+                  handleAuctionWinnerAddScore(player.id);
+                }}
+                variant="outlined"
+                sx={{ mt: 1, mr: 1 }}
+              >
+                {player.name}
+              </Button>
+            ))}
+            <Button onClick={handleAuctionNoWinner} variant="outlined" sx={{ mt: 1, mr: 1 }}>
+              No one (wrong answer)
+            </Button>
+          </>
         )}
         {question?.image && (
           <img
@@ -81,15 +129,15 @@ export default function QuestionDialog({
           onClick={handleSubtractScore}
           variant="outlined"
           color="error"
-          disabled={!selectedPlayer || !question}
+          disabled={!selectedPlayer || !question || isChoosingAuctionWinner}
         >
-          -{scoreDelta}
+          -{wrongAnswerPenalty}
         </Button>
         <Button
           onClick={handleAddScore}
           variant="contained"
           color="success"
-          disabled={!selectedPlayer || !question}
+          disabled={!selectedPlayer || !question || isChoosingAuctionWinner}
         >
           +{scoreDelta}
         </Button>

@@ -15,6 +15,7 @@ type Question = {
   question: string;
   image?: string;
   answer: string;
+  isAnswered?: boolean;
 };
 
 type Category = {
@@ -36,6 +37,7 @@ type JeopardyTableProps = {
 export default function JeopardyTable({ categories: categoriesProp }: JeopardyTableProps) {
   const [selectedQuestion, setSelectedQuestion] = React.useState<QuestionDialogData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
+  const [answeredQuestionKeys, setAnsweredQuestionKeys] = React.useState<Set<string>>(new Set());
   const dialogCloseTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const categoriesData = React.useMemo(() => {
@@ -78,6 +80,20 @@ export default function JeopardyTable({ categories: categoriesProp }: JeopardyTa
     return map;
   }, [categoriesData]);
 
+  React.useEffect(() => {
+    const initiallyAnswered = new Set<string>();
+
+    for (const category of categoriesData) {
+      for (const question of category.questions) {
+        if (question.isAnswered) {
+          initiallyAnswered.add(`${category.title}::${question.price}`);
+        }
+      }
+    }
+
+    setAnsweredQuestionKeys(initiallyAnswered);
+  }, [categoriesData]);
+
   const onCellClick = (cellData: QuestionDialogData) => {
     setSelectedQuestion(cellData);
     setIsDialogOpen(true);
@@ -94,6 +110,14 @@ export default function JeopardyTable({ categories: categoriesProp }: JeopardyTa
     }, 100);
 
     setIsDialogOpen(false);
+  };
+
+  const onQuestionAnswered = (question: QuestionDialogData) => {
+    setAnsweredQuestionKeys((prev) => {
+      const next = new Set(prev);
+      next.add(`${question.category}::${question.price}`);
+      return next;
+    });
   };
 
   React.useEffect(() => {
@@ -123,14 +147,18 @@ export default function JeopardyTable({ categories: categoriesProp }: JeopardyTa
               <TableRow key={category}>
                 <TableCell sx={{ fontWeight: 700 }}>{category}</TableCell>
                 {prices.map((price) => {
+                  const questionKey = `${category}::${price}`;
                   const cellQuestion: QuestionDialogData | undefined = questionMap.get(
-                    `${category}::${price}`,
+                    questionKey,
                   );
-                  const isDisabled = !cellQuestion;
+                  const isDisabled =
+                    !cellQuestion ||
+                    Boolean(cellQuestion.isAnswered) ||
+                    answeredQuestionKeys.has(questionKey);
 
                   return (
                     <TableCell
-                      key={`${category}::${price}`}
+                      key={questionKey}
                       align="center"
                       sx={{
                         verticalAlign: 'top',
@@ -138,14 +166,14 @@ export default function JeopardyTable({ categories: categoriesProp }: JeopardyTa
                         whiteSpace: 'normal',
                         borderRight: '1px solid rgba(224, 224, 224, 1)',
                         opacity: isDisabled ? 0.45 : 1,
-                        cursor: 'pointer',
+                        cursor: isDisabled ? 'default' : 'pointer',
                         userSelect: 'none',
                         height: 64,
                         paddingTop: 1,
                         paddingBottom: 1,
                       }}
                       onClick={() => {
-                        if (!cellQuestion) return;
+                        if (isDisabled || !cellQuestion) return;
                         onCellClick(cellQuestion);
                       }}
                     >
@@ -163,6 +191,7 @@ export default function JeopardyTable({ categories: categoriesProp }: JeopardyTa
         question={selectedQuestion}
         isOpen={isDialogOpen}
         onClose={onDialogClose}
+        onQuestionAnswered={onQuestionAnswered}
         disableBackdropClose
       />
     </>
