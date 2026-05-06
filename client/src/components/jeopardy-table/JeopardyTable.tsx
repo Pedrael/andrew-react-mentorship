@@ -8,51 +8,29 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import QuestionDialog from '../question-dialog/QuestionDialog';
 import type { QuestionDialogData } from '../question-dialog/QuestionDialog';
-import questionsJson from '../../data/questions.json';
-
-type Question = {
-  price: number;
-  question: string;
-  image?: string;
-  answer: string;
-  isAnswered?: boolean;
-};
-
-type Category = {
-  title: string;
-  questions: Question[];
-};
-
-type QuestionsJsonShape = {
-  categories: Category[];
-};
-
-type FlatQuestion = QuestionDialogData;
+import { GameContext, buildQuestionKey } from '../../context/GameContext';
 
 type JeopardyTableProps = {
   isAdmin: boolean;
-  categories?: Category[];
-  onQuestionClick?: (question: FlatQuestion) => void;
 };
 
-export default function JeopardyTable({
-  categories: categoriesProp,
-  isAdmin = false,
-}: JeopardyTableProps) {
+export default function JeopardyTable({ isAdmin = false }: JeopardyTableProps) {
+  const game = React.useContext(GameContext);
+
+  if (!game) {
+    throw new Error('JeopardyTable must be used inside GameProvider');
+  }
+
+  const { categories: categoriesData, answeredQuestionKeys, auctionedQuestionKeys } = game;
+
   const [selectedQuestion, setSelectedQuestion] = React.useState<QuestionDialogData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
-  const [answeredQuestionKeys, setAnsweredQuestionKeys] = React.useState<Set<string>>(new Set());
-  const [auctionedQuestionKeys, setAuctionedQuestionKeys] = React.useState<Set<string>>(new Set());
   const dialogCloseTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const categoriesData = React.useMemo(() => {
-    const fromJson = (questionsJson as QuestionsJsonShape | undefined)?.categories ?? [];
-    return categoriesProp ?? fromJson;
-  }, [categoriesProp]);
-
-  const categories = React.useMemo(() => {
-    return categoriesData.map((category) => category.title);
-  }, [categoriesData]);
+  const categories = React.useMemo(
+    () => categoriesData.map((category) => category.title),
+    [categoriesData],
+  );
 
   const prices = React.useMemo(() => {
     const seen = new Set<number>();
@@ -75,9 +53,12 @@ export default function JeopardyTable({
 
     for (const category of categoriesData) {
       for (const q of category.questions) {
-        map.set(`${category.title}::${q.price}`, {
-          ...q,
+        map.set(buildQuestionKey(category.title, q.price), {
           category: category.title,
+          price: q.price,
+          question: q.question,
+          answer: q.answer,
+          image: q.image,
         });
       }
     }
@@ -85,26 +66,8 @@ export default function JeopardyTable({
     return map;
   }, [categoriesData]);
 
-  React.useEffect(() => {
-    const initiallyAnswered = new Set<string>();
-
-    for (const category of categoriesData) {
-      for (const question of category.questions) {
-        if (question.isAnswered) {
-          initiallyAnswered.add(`${category.title}::${question.price}`);
-        }
-      }
-    }
-
-    setAnsweredQuestionKeys(initiallyAnswered);
-    setAuctionedQuestionKeys(new Set());
-  }, [categoriesData]);
-
-  const onCellClick = (cellData: QuestionDialogData, isAuctioned: boolean) => {
-    setSelectedQuestion({
-      ...cellData,
-      isAuctioned,
-    });
+  const onCellClick = (cellData: QuestionDialogData) => {
+    setSelectedQuestion(cellData);
     setIsDialogOpen(true);
   };
 
@@ -119,31 +82,6 @@ export default function JeopardyTable({
     }, 100);
 
     setIsDialogOpen(false);
-  };
-
-  const onQuestionAnswered = (question: QuestionDialogData) => {
-    const questionKey = `${question.category}::${question.price}`;
-    setAnsweredQuestionKeys((prev) => {
-      const next = new Set(prev);
-      next.add(questionKey);
-      return next;
-    });
-    setAuctionedQuestionKeys((prev) => {
-      const next = new Set(prev);
-      next.delete(questionKey);
-      return next;
-    });
-  };
-
-  const onQuestionAuctioned = (question: QuestionDialogData) => {
-    const questionKey = `${question.category}::${question.price}`;
-    setAuctionedQuestionKeys((prev) => {
-      const next = new Set(prev);
-      if (!answeredQuestionKeys.has(questionKey)) {
-        next.add(questionKey);
-      }
-      return next;
-    });
   };
 
   React.useEffect(() => {
@@ -173,13 +111,10 @@ export default function JeopardyTable({
               <TableRow key={category}>
                 <TableCell sx={{ fontWeight: 700 }}>{category}</TableCell>
                 {prices.map((price) => {
-                  const questionKey = `${category}::${price}`;
+                  const questionKey = buildQuestionKey(category, price);
                   const cellQuestion: QuestionDialogData | undefined = questionMap.get(questionKey);
                   const isAuctioned = auctionedQuestionKeys.has(questionKey);
-                  const isDisabled =
-                    !cellQuestion ||
-                    Boolean(cellQuestion.isAnswered) ||
-                    answeredQuestionKeys.has(questionKey);
+                  const isDisabled = !cellQuestion || answeredQuestionKeys.has(questionKey);
 
                   return (
                     <TableCell
@@ -200,7 +135,7 @@ export default function JeopardyTable({
                       }}
                       onClick={() => {
                         if (isDisabled || !cellQuestion) return;
-                        onCellClick(cellQuestion, isAuctioned);
+                        onCellClick(cellQuestion);
                       }}
                     >
                       {cellQuestion?.price ?? ''}
@@ -218,8 +153,6 @@ export default function JeopardyTable({
         isAdmin={isAdmin}
         isOpen={isDialogOpen}
         onClose={onDialogClose}
-        onQuestionAnswered={onQuestionAnswered}
-        onQuestionAuctioned={onQuestionAuctioned}
         disableBackdropClose
       />
     </>

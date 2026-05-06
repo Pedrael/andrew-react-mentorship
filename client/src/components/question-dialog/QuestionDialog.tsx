@@ -5,7 +5,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
 import { useContext, useEffect, useRef } from 'react';
-import { GameContext } from '../../context/GameContext';
+import { GameContext, buildQuestionKey } from '../../context/GameContext';
 
 export type QuestionDialogData = {
   category: string;
@@ -13,8 +13,6 @@ export type QuestionDialogData = {
   price: number;
   answer: string;
   image?: string;
-  isAnswered?: boolean;
-  isAuctioned?: boolean;
 };
 
 type QuestionDialogProps = {
@@ -23,8 +21,6 @@ type QuestionDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   disableBackdropClose?: boolean;
-  onQuestionAnswered?: (question: QuestionDialogData) => void;
-  onQuestionAuctioned?: (question: QuestionDialogData) => void;
 };
 
 export default function QuestionDialog({
@@ -33,8 +29,6 @@ export default function QuestionDialog({
   isOpen,
   onClose,
   disableBackdropClose = false,
-  onQuestionAnswered,
-  onQuestionAuctioned,
 }: QuestionDialogProps) {
   const game = useContext(GameContext);
 
@@ -47,6 +41,9 @@ export default function QuestionDialog({
     addScore,
     subtractScore,
     selectNextPlayer,
+    auctionedQuestionKeys,
+    markQuestionAnswered,
+    markQuestionAuctioned,
     revealedQuestionKey,
     revealQuestionAnswer,
     clearRevealedQuestionAnswer,
@@ -54,8 +51,8 @@ export default function QuestionDialog({
   const selectedPlayer = players.find((player) => player.isSelected);
   const scoreDelta = question?.price ?? 0;
   const wrongAnswerPenalty = 100;
-  const isAuctioned = Boolean(question?.isAuctioned);
-  const questionKey = question ? `${question.category}::${question.price}` : null;
+  const questionKey = question ? buildQuestionKey(question.category, question.price) : null;
+  const isAuctioned = Boolean(questionKey && auctionedQuestionKeys.has(questionKey));
   const isRevealingAnswer = Boolean(questionKey && revealedQuestionKey === questionKey);
   const previousQuestionKeyRef = useRef<string | null>(null);
 
@@ -75,18 +72,18 @@ export default function QuestionDialog({
     if (!selectedPlayer || !question || !questionKey) return;
     revealQuestionAnswer(questionKey);
     addScore(selectedPlayer.id, scoreDelta);
-    onQuestionAnswered?.(question);
+    markQuestionAnswered(questionKey);
     selectNextPlayer();
   };
 
   const handleMarkAsAuctioned = () => {
-    if (!question) return;
+    if (!question || !questionKey) return;
     if (!isAuctioned) {
       if (!selectedPlayer) return;
       subtractScore(selectedPlayer.id, wrongAnswerPenalty);
     }
     clearRevealedQuestionAnswer();
-    onQuestionAuctioned?.(question);
+    markQuestionAuctioned(questionKey);
     selectNextPlayer();
     onClose();
   };
