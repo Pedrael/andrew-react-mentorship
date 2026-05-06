@@ -4,7 +4,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useRef } from 'react';
 import { GameContext } from '../../context/GameContext';
 
 export type QuestionDialogData = {
@@ -14,6 +14,7 @@ export type QuestionDialogData = {
   answer: string;
   image?: string;
   isAnswered?: boolean;
+  isAuctioned?: boolean;
 };
 
 type QuestionDialogProps = {
@@ -23,6 +24,7 @@ type QuestionDialogProps = {
   onClose: () => void;
   disableBackdropClose?: boolean;
   onQuestionAnswered?: (question: QuestionDialogData) => void;
+  onQuestionAuctioned?: (question: QuestionDialogData) => void;
 };
 
 export default function QuestionDialog({
@@ -32,6 +34,7 @@ export default function QuestionDialog({
   onClose,
   disableBackdropClose = false,
   onQuestionAnswered,
+  onQuestionAuctioned,
 }: QuestionDialogProps) {
   const game = useContext(GameContext);
 
@@ -39,53 +42,68 @@ export default function QuestionDialog({
     throw new Error('QuestionDialog must be used inside GameProvider');
   }
 
-  const { players, addScore, subtractScore } = game;
+  const {
+    players,
+    addScore,
+    subtractScore,
+    selectNextPlayer,
+    revealedQuestionKey,
+    revealQuestionAnswer,
+    clearRevealedQuestionAnswer,
+  } = game;
   const selectedPlayer = players.find((player) => player.isSelected);
   const scoreDelta = question?.price ?? 0;
   const wrongAnswerPenalty = 100;
-  const [isChoosingAuctionWinner, setIsChoosingAuctionWinner] = useState(false);
-  const [isRevealingAnswer, setIsRevealingAnswer] = useState(false);
+  const isAuctioned = Boolean(question?.isAuctioned);
+  const questionKey = question ? `${question.category}::${question.price}` : null;
+  const isRevealingAnswer = Boolean(questionKey && revealedQuestionKey === questionKey);
+  const previousQuestionKeyRef = useRef<string | null>(null);
+
+  const closeDialog = () => {
+    clearRevealedQuestionAnswer();
+    onClose();
+  };
 
   const handleClose = (_event: object, reason: 'backdropClick' | 'escapeKeyDown') => {
     if (disableBackdropClose && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
       return;
     }
 
-    onClose();
+    closeDialog();
   };
   const handleRevealAnswer = () => {
-    if (!selectedPlayer || !question) return;
-    setIsRevealingAnswer(true);
+    if (!selectedPlayer || !question || !questionKey) return;
+    revealQuestionAnswer(questionKey);
     addScore(selectedPlayer.id, scoreDelta);
     onQuestionAnswered?.(question);
+    selectNextPlayer();
   };
 
-  const handleSubtractScore = () => {
-    if (!selectedPlayer || !question) return;
-    subtractScore(selectedPlayer.id, wrongAnswerPenalty);
-    setIsChoosingAuctionWinner(true);
-  };
-
-  const handleAuctionWinnerAddScore = (playerId: string) => {
+  const handleMarkAsAuctioned = () => {
     if (!question) return;
-    addScore(playerId, scoreDelta);
-    onQuestionAnswered?.(question);
-    onClose();
-  };
-
-  const handleAuctionNoWinner = () => {
-    if (!question) return;
-    onQuestionAnswered?.(question);
+    if (!isAuctioned) {
+      if (!selectedPlayer) return;
+      subtractScore(selectedPlayer.id, wrongAnswerPenalty);
+    }
+    clearRevealedQuestionAnswer();
+    onQuestionAuctioned?.(question);
+    selectNextPlayer();
     onClose();
   };
 
   useEffect(() => {
-    if (!isOpen) {
-      setTimeout(() => {
-        setIsChoosingAuctionWinner(false);
-      }, 0);
+    if (!isOpen || !questionKey) {
+      clearRevealedQuestionAnswer();
+      previousQuestionKeyRef.current = questionKey;
+      return;
     }
-  }, [isOpen]);
+
+    if (previousQuestionKeyRef.current && previousQuestionKeyRef.current !== questionKey) {
+      clearRevealedQuestionAnswer();
+    }
+
+    previousQuestionKeyRef.current = questionKey;
+  }, [isOpen, questionKey, clearRevealedQuestionAnswer]);
 
   return (
     <Dialog open={isOpen} onClose={handleClose} maxWidth="sm" fullWidth>
@@ -97,28 +115,10 @@ export default function QuestionDialog({
             Select a player before applying score.
           </Typography>
         )}
-        {isChoosingAuctionWinner && (
-          <>
-            <Typography variant="subtitle2" sx={{ mt: 1.5 }}>
-              Wrong answer: -{wrongAnswerPenalty} applied. Choose player to get +{scoreDelta}, or no
-              one.
-            </Typography>
-            {players.map((player) => (
-              <Button
-                key={player.id}
-                onClick={() => {
-                  handleAuctionWinnerAddScore(player.id);
-                }}
-                variant="outlined"
-                sx={{ mt: 1, mr: 1 }}
-              >
-                {player.name}
-              </Button>
-            ))}
-            <Button onClick={handleAuctionNoWinner} variant="outlined" sx={{ mt: 1, mr: 1 }}>
-              No one (wrong answer)
-            </Button>
-          </>
+        {isAuctioned && (
+          <Typography variant="subtitle2" color="warning.main" sx={{ mt: 1.5 }}>
+            Auctioned question: answer it like a regular question with no penalty for wrong answers.
+          </Typography>
         )}
         {question?.image && (
           <img
@@ -136,22 +136,22 @@ export default function QuestionDialog({
       </DialogContent>
       <DialogActions>
         <Button
-          onClick={handleSubtractScore}
+          onClick={handleMarkAsAuctioned}
           variant="outlined"
-          color="error"
-          disabled={!selectedPlayer || !question || isChoosingAuctionWinner || isRevealingAnswer}
+          color={isAuctioned ? 'warning' : 'error'}
+          disabled={!question || isRevealingAnswer || (!isAuctioned && !selectedPlayer)}
         >
-          -{wrongAnswerPenalty}
+          {isAuctioned ? 'Wrong answer (-0)' : `Mark as auctioned (-${wrongAnswerPenalty})`}
         </Button>
         <Button
           onClick={handleRevealAnswer}
           variant="contained"
           color="success"
-          disabled={!selectedPlayer || !question || isChoosingAuctionWinner || isRevealingAnswer}
+          disabled={!selectedPlayer || !question || isRevealingAnswer}
         >
           +{scoreDelta}
         </Button>
-        <Button onClick={onClose} variant="contained">
+        <Button onClick={closeDialog} variant="contained">
           Close
         </Button>
       </DialogActions>

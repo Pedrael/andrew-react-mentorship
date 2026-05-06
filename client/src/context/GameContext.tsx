@@ -1,4 +1,4 @@
-import { createContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useState, type ReactNode } from 'react';
 
 export type Player = {
   id: string;
@@ -31,6 +31,10 @@ export type GameContextValue = {
   subtractScore: (playerId: string, points: number) => void;
   resetScores: () => void;
   selectPlayer: (playerId: string) => void;
+  selectNextPlayer: () => void;
+  revealedQuestionKey: string | null;
+  revealQuestionAnswer: (questionKey: string) => void;
+  clearRevealedQuestionAnswer: () => void;
 };
 
 type GameProviderProps = {
@@ -56,6 +60,7 @@ const initialPlayers: Player[] = [
 
 export function GameProvider({ children }: GameProviderProps) {
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
+  const [revealedQuestionKey, setRevealedQuestionKey] = useState<string | null>(null);
   const addPlayer = (player: Player) => {
     setPlayers((prevPlayers) => [...prevPlayers, player]);
   };
@@ -114,6 +119,24 @@ export function GameProvider({ children }: GameProviderProps) {
   const findSelectedPlayer = (playerId: string) => {
     return players.find((player) => player.id === playerId);
   };
+  const selectNextPlayer = useCallback(() => {
+    setPlayers((prevPlayers) => {
+      if (prevPlayers.length === 0) return prevPlayers;
+      const currentIndex = prevPlayers.findIndex((player) => player.isSelected);
+      const nextIndex =
+        currentIndex === -1 ? 0 : (currentIndex + 1) % prevPlayers.length;
+      return prevPlayers.map((player, index) => ({
+        ...player,
+        isSelected: index === nextIndex,
+      }));
+    });
+  }, []);
+  const revealQuestionAnswer = useCallback((questionKey: string) => {
+    setRevealedQuestionKey(questionKey);
+  }, []);
+  const clearRevealedQuestionAnswer = useCallback(() => {
+    setRevealedQuestionKey(null);
+  }, []);
   return (
     <GameContext.Provider
       value={{
@@ -125,6 +148,10 @@ export function GameProvider({ children }: GameProviderProps) {
         subtractScore,
         resetScores,
         selectPlayer,
+        selectNextPlayer,
+        revealedQuestionKey,
+        revealQuestionAnswer,
+        clearRevealedQuestionAnswer,
       }}
     >
       {children}

@@ -42,6 +42,7 @@ export default function JeopardyTable({
   const [selectedQuestion, setSelectedQuestion] = React.useState<QuestionDialogData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
   const [answeredQuestionKeys, setAnsweredQuestionKeys] = React.useState<Set<string>>(new Set());
+  const [auctionedQuestionKeys, setAuctionedQuestionKeys] = React.useState<Set<string>>(new Set());
   const dialogCloseTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const categoriesData = React.useMemo(() => {
@@ -96,10 +97,14 @@ export default function JeopardyTable({
     }
 
     setAnsweredQuestionKeys(initiallyAnswered);
+    setAuctionedQuestionKeys(new Set());
   }, [categoriesData]);
 
-  const onCellClick = (cellData: QuestionDialogData) => {
-    setSelectedQuestion(cellData);
+  const onCellClick = (cellData: QuestionDialogData, isAuctioned: boolean) => {
+    setSelectedQuestion({
+      ...cellData,
+      isAuctioned,
+    });
     setIsDialogOpen(true);
   };
 
@@ -117,9 +122,26 @@ export default function JeopardyTable({
   };
 
   const onQuestionAnswered = (question: QuestionDialogData) => {
+    const questionKey = `${question.category}::${question.price}`;
     setAnsweredQuestionKeys((prev) => {
       const next = new Set(prev);
-      next.add(`${question.category}::${question.price}`);
+      next.add(questionKey);
+      return next;
+    });
+    setAuctionedQuestionKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(questionKey);
+      return next;
+    });
+  };
+
+  const onQuestionAuctioned = (question: QuestionDialogData) => {
+    const questionKey = `${question.category}::${question.price}`;
+    setAuctionedQuestionKeys((prev) => {
+      const next = new Set(prev);
+      if (!answeredQuestionKeys.has(questionKey)) {
+        next.add(questionKey);
+      }
       return next;
     });
   };
@@ -153,6 +175,7 @@ export default function JeopardyTable({
                 {prices.map((price) => {
                   const questionKey = `${category}::${price}`;
                   const cellQuestion: QuestionDialogData | undefined = questionMap.get(questionKey);
+                  const isAuctioned = auctionedQuestionKeys.has(questionKey);
                   const isDisabled =
                     !cellQuestion ||
                     Boolean(cellQuestion.isAnswered) ||
@@ -173,10 +196,11 @@ export default function JeopardyTable({
                         height: 64,
                         paddingTop: 1,
                         paddingBottom: 1,
+                        backgroundColor: isAuctioned ? 'rgba(255, 193, 7, 0.15)' : 'inherit',
                       }}
                       onClick={() => {
                         if (isDisabled || !cellQuestion) return;
-                        onCellClick(cellQuestion);
+                        onCellClick(cellQuestion, isAuctioned);
                       }}
                     >
                       {cellQuestion?.price ?? ''}
@@ -195,6 +219,7 @@ export default function JeopardyTable({
         isOpen={isDialogOpen}
         onClose={onDialogClose}
         onQuestionAnswered={onQuestionAnswered}
+        onQuestionAuctioned={onQuestionAuctioned}
         disableBackdropClose
       />
     </>
