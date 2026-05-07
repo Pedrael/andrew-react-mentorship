@@ -1,4 +1,4 @@
-import { createContext, useCallback, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useEffect, useState, type ReactNode } from 'react';
 import questionsJson from '../data/questions.json';
 
 export type Player = {
@@ -69,23 +69,37 @@ type GameProviderProps = {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const GameContext = createContext<GameContextValue | null>(null);
-const initialPlayers: Player[] = [
-  {
-    id: 'player-1',
-    name: 'Player 1',
-    score: 0,
-    isSelected: true,
-  },
-  {
-    id: 'player-2',
-    name: 'Player 2',
-    score: 0,
-    isSelected: false,
-  },
+
+const CATEGORIES_STORAGE_KEY = 'jeopardy-categories';
+const PLAYERS_STORAGE_KEY = 'jeopardy-players';
+
+function loadInitialCategories(): Category[] {
+  try {
+    const stored = localStorage.getItem(CATEGORIES_STORAGE_KEY);
+    if (stored) return JSON.parse(stored) as Category[];
+  } catch {
+    // corrupted storage — fall back to the JSON file
+  }
+  return (questionsJson as QuestionsJsonShape | undefined)?.categories ?? [];
+}
+
+function loadInitialPlayers(): Player[] {
+  try {
+    const stored = localStorage.getItem(PLAYERS_STORAGE_KEY);
+    if (stored) return JSON.parse(stored) as Player[];
+  } catch {
+    // corrupted storage — fall back to defaults
+  }
+  return defaultPlayers;
+}
+
+const defaultPlayers: Player[] = [
+  { id: 'player-1', name: 'Player 1', score: 0, isSelected: true },
+  { id: 'player-2', name: 'Player 2', score: 0, isSelected: false },
 ];
 
-const initialCategories: Category[] =
-  (questionsJson as QuestionsJsonShape | undefined)?.categories ?? [];
+const initialCategories: Category[] = loadInitialCategories();
+const initialPlayers: Player[] = loadInitialPlayers();
 
 const initialAnsweredKeys = new Set<string>();
 for (const category of initialCategories) {
@@ -97,8 +111,25 @@ for (const category of initialCategories) {
 }
 
 export function GameProvider({ children }: GameProviderProps) {
-  const [players, setPlayers] = useState<Player[]>(initialPlayers);
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [players, setPlayers] = useState<Player[]>(initialPlayers);  const [categories, setCategories] = useState<Category[]>(initialCategories);
+
+  // Persist categories to localStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
+    } catch {
+      // storage quota exceeded — ignore
+    }
+  }, [categories]);
+
+  // Persist players to localStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(PLAYERS_STORAGE_KEY, JSON.stringify(players));
+    } catch {
+      // storage quota exceeded — ignore
+    }
+  }, [players]);
   const [answeredQuestionKeys, setAnsweredQuestionKeys] =
     useState<Set<string>>(initialAnsweredKeys);
   const [auctionedQuestionKeys, setAuctionedQuestionKeys] = useState<Set<string>>(new Set());
