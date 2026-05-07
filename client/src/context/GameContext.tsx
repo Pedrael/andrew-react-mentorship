@@ -51,6 +51,7 @@ export type GameContextValue = {
   revealedQuestionKey: string | null;
   revealQuestionAnswer: (questionKey: string) => void;
   clearRevealedQuestionAnswer: () => void;
+  revealWinnerOnGameEnd: () => Player | null;
 };
 
 type GameProviderProps = {
@@ -190,6 +191,16 @@ export function GameProvider({ children }: GameProviderProps) {
       return next;
     });
   }, []);
+
+  const revealWinnerOnGameEnd = () => {
+    if (categories.some((category) => category.questions.some((question) => !question.isAnswered)))
+      return null;
+    const winner = players.reduce(
+      (max, player) => (player.score > max.score ? player : max),
+      players[0],
+    );
+    return winner;
+  };
   return (
     <GameContext.Provider
       value={{
@@ -210,6 +221,7 @@ export function GameProvider({ children }: GameProviderProps) {
         revealedQuestionKey,
         revealQuestionAnswer,
         clearRevealedQuestionAnswer,
+        revealWinnerOnGameEnd,
       }}
     >
       {children}

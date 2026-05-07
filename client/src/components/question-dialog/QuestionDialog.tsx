@@ -4,8 +4,8 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
-import { useContext, useEffect, useRef } from 'react';
-import { GameContext, buildQuestionKey } from '../../context/GameContext';
+import { useContext, useEffect, useRef, useState } from 'react';
+import { GameContext, buildQuestionKey, type Player } from '../../context/GameContext';
 
 export type QuestionDialogData = {
   category: string;
@@ -35,6 +35,7 @@ export default function QuestionDialog({
   onAnswerReveal,
 }: QuestionDialogProps) {
   const game = useContext(GameContext);
+  const [winner, setWinner] = useState<Player | null>(null);
 
   if (!game) {
     throw new Error('QuestionDialog must be used inside GameProvider');
@@ -51,6 +52,7 @@ export default function QuestionDialog({
     revealedQuestionKey,
     revealQuestionAnswer,
     clearRevealedQuestionAnswer,
+    revealWinnerOnGameEnd,
   } = game;
   const selectedPlayer = players.find((player) => player.isSelected);
   const scoreDelta = question?.price ?? 0;
@@ -79,6 +81,8 @@ export default function QuestionDialog({
     markQuestionAnswered(questionKey);
     selectNextPlayer();
     onAnswerReveal?.(questionKey);
+    const winner = revealWinnerOnGameEnd();
+    setWinner(winner);
   };
 
   const handleMarkAsAuctioned = () => {
@@ -135,28 +139,35 @@ export default function QuestionDialog({
             Answer: {question?.answer}
           </Typography>
         )}
+        {winner && (
+          <Typography variant="body1" sx={{ mt: 1.5, color: 'success.main' }}>
+            Winner: {winner?.name}
+          </Typography>
+        )}
       </DialogContent>
-      <DialogActions>
-        <Button
-          onClick={handleMarkAsAuctioned}
-          variant="outlined"
-          color={isAuctioned ? 'warning' : 'error'}
-          disabled={!question || isRevealingAnswer || (!isAuctioned && !selectedPlayer)}
-        >
-          {isAuctioned ? 'Wrong answer (-0)' : `Mark as auctioned (-${wrongAnswerPenalty})`}
-        </Button>
-        <Button
-          onClick={handleRevealAnswer}
-          variant="contained"
-          color="success"
-          disabled={!selectedPlayer || !question || isRevealingAnswer}
-        >
-          +{scoreDelta}
-        </Button>
-        <Button onClick={closeDialog} variant="contained">
-          Close
-        </Button>
-      </DialogActions>
+      {isAdmin && (
+        <DialogActions>
+          <Button
+            onClick={handleMarkAsAuctioned}
+            variant="outlined"
+            color={isAuctioned ? 'warning' : 'error'}
+            disabled={!question || isRevealingAnswer || (!isAuctioned && !selectedPlayer)}
+          >
+            {isAuctioned ? 'Wrong answer (-0)' : `Mark as auctioned (-${wrongAnswerPenalty})`}
+          </Button>
+          <Button
+            onClick={handleRevealAnswer}
+            variant="contained"
+            color="success"
+            disabled={!selectedPlayer || !question || isRevealingAnswer}
+          >
+            +{scoreDelta}
+          </Button>
+          <Button onClick={closeDialog} variant="contained">
+            Close
+          </Button>
+        </DialogActions>
+      )}
     </Dialog>
   );
 }

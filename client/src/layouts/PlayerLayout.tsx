@@ -11,6 +11,7 @@ import {
   type RevealAnswerPayload,
 } from '../lib/websocket/messages';
 import { useGame } from '../hooks/useGame';
+import PlayerScoreboard from '../components/player-scoreboard/PlayerScoreboard';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080';
 
@@ -47,7 +48,7 @@ export default function PlayerLayout() {
   return (
     <section style={{ padding: 16 }}>
       <JeopardyTable isAdmin={false} />
-
+      <PlayerScoreboard />
       <QuestionDialog
         question={openedQuestion}
         isAdmin={false}

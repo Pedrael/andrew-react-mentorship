@@ -138,7 +138,7 @@ export default function JeopardyTable({
                         wordBreak: 'break-word',
                         whiteSpace: 'normal',
                         opacity: hasNoQuestion ? 0.35 : 1,
-                        cursor: isDisabled ? 'default' : 'pointer',
+                        cursor: isDisabled || !isAdmin ? 'default' : 'pointer',
                         userSelect: 'none',
                         height: 64,
                         paddingTop: 1,
@@ -151,7 +151,7 @@ export default function JeopardyTable({
                         color: isAnswered ? '#fff' : 'inherit',
                       }}
                       onClick={() => {
-                        if (isDisabled || !cellQuestion) return;
+                        if (isDisabled || !cellQuestion || !isAdmin) return;
                         onCellClick(cellQuestion);
                       }}
                     >
