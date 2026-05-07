@@ -57,3 +57,15 @@ export interface PlayerScore {
 }
 
 export type PlayersUpdatePayload = PlayerScore[];
+
+export const UPDATE_QUESTION_EVENT = 'update_question';
+
+export interface UpdateQuestionPayload {
+  category: string;
+  price: number;
+  question: string;
+  answer: string;
+  image?: string;
+}
+
+export const SYNC_CATEGORIES_EVENT = 'sync_categories';

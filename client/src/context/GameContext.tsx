@@ -44,6 +44,13 @@ export type GameContextValue = {
   selectPlayer: (playerId: string) => void;
   selectNextPlayer: () => void;
   categories: Category[];
+  addCategory: () => void;
+  updateCategoryTitle: (index: number, newTitle: string) => void;
+  updateQuestion: (
+    categoryIndex: number,
+    price: number,
+    data: { question: string; answer: string; image?: string },
+  ) => void;
   answeredQuestionKeys: Set<string>;
   auctionedQuestionKeys: Set<string>;
   markQuestionAnswered: (questionKey: string) => void;
@@ -53,6 +60,7 @@ export type GameContextValue = {
   clearRevealedQuestionAnswer: () => void;
   revealWinnerOnGameEnd: () => Player | null;
   syncPlayers: (data: Array<{ id: string; name: string; score: number }>) => void;
+  syncCategories: (cats: Category[]) => void;
 };
 
 type GameProviderProps = {
@@ -90,7 +98,7 @@ for (const category of initialCategories) {
 
 export function GameProvider({ children }: GameProviderProps) {
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
-  const [categories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [answeredQuestionKeys, setAnsweredQuestionKeys] =
     useState<Set<string>>(initialAnsweredKeys);
   const [auctionedQuestionKeys, setAuctionedQuestionKeys] = useState<Set<string>>(new Set());
@@ -164,6 +172,56 @@ export function GameProvider({ children }: GameProviderProps) {
       }));
     });
   }, []);
+  const addCategory = useCallback(() => {
+    setCategories((prev) => {
+      const priceSet = new Set<number>();
+      for (const cat of prev) {
+        for (const q of cat.questions) priceSet.add(q.price);
+      }
+      const prices = [...priceSet].sort((a, b) => a - b);
+      return [
+        ...prev,
+        {
+          title: `Category ${prev.length + 1}`,
+          questions: prices.map((price) => ({ price, question: '', answer: '', isAnswered: false })),
+        },
+      ];
+    });
+  }, []);
+
+  const updateCategoryTitle = useCallback((index: number, newTitle: string) => {
+    setCategories((prev) =>
+      prev.map((cat, i) => (i === index ? { ...cat, title: newTitle } : cat)),
+    );
+  }, []);
+
+  const updateQuestion = useCallback(
+    (
+      categoryIndex: number,
+      price: number,
+      data: { question: string; answer: string; image?: string },
+    ) => {
+      setCategories((prev) => {
+        const updated = [...prev];
+        const cat = updated[categoryIndex];
+        if (!cat) return prev;
+        const qIdx = cat.questions.findIndex((q) => q.price === price);
+        if (qIdx === -1) {
+          updated[categoryIndex] = {
+            ...cat,
+            questions: [...cat.questions, { price, ...data, isAnswered: false }],
+          };
+        } else {
+          const questions = [...cat.questions];
+          questions[qIdx] = { ...questions[qIdx], ...data };
+          updated[categoryIndex] = { ...cat, questions };
+        }
+        return updated;
+      });
+    },
+    [],
+  );
+
   const revealQuestionAnswer = useCallback((questionKey: string) => {
     setRevealedQuestionKey(questionKey);
   }, []);
@@ -214,6 +272,10 @@ export function GameProvider({ children }: GameProviderProps) {
     );
     return winner;
   };
+  const syncCategories = useCallback((cats: Category[]) => {
+    setCategories(cats);
+  }, []);
+
   return (
     <GameContext.Provider
       value={{
@@ -227,6 +289,9 @@ export function GameProvider({ children }: GameProviderProps) {
         selectPlayer,
         selectNextPlayer,
         categories,
+        addCategory,
+        updateCategoryTitle,
+        updateQuestion,
         answeredQuestionKeys,
         auctionedQuestionKeys,
         markQuestionAnswered,
@@ -236,6 +301,7 @@ export function GameProvider({ children }: GameProviderProps) {
         clearRevealedQuestionAnswer,
         revealWinnerOnGameEnd,
         syncPlayers,
+        syncCategories,
       }}
     >
       {children}

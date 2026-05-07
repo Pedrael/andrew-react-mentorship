@@ -8,16 +8,25 @@ import {
   CLOSE_QUESTION_EVENT,
   REVEAL_ANSWER_EVENT,
   PLAYERS_UPDATE_EVENT,
+  UPDATE_QUESTION_EVENT,
+  SYNC_CATEGORIES_EVENT,
   type RevealAnswerPayload,
   type PlayersUpdatePayload,
+  type UpdateQuestionPayload,
 } from '../lib/websocket/messages';
 import { useGame } from '../hooks/useGame';
+import type { Category } from '../context/GameContext';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080';
 
 export default function AdminLayout() {
-  const { players } = useGame();
+  const { players, categories } = useGame();
   const { send, status } = useWebSocket({ url: WS_URL, role: 'admin' });
+
+  useEffect(() => {
+    if (status !== 'open') return;
+    send<Category[]>(SYNC_CATEGORIES_EVENT, categories);
+  }, [categories, status, send]);
 
   useEffect(() => {
     if (status !== 'open') return;
@@ -47,6 +56,13 @@ export default function AdminLayout() {
     [send],
   );
 
+  const handleQuestionLiveEdit = useCallback(
+    (data: QuestionDialogData) => {
+      send<UpdateQuestionPayload>(UPDATE_QUESTION_EVENT, data);
+    },
+    [send],
+  );
+
   return (
     <section style={{ padding: 16 }}>
       <JeopardyTable
@@ -54,6 +70,7 @@ export default function AdminLayout() {
         onQuestionOpen={handleQuestionOpen}
         onQuestionClose={handleQuestionClose}
         onAnswerReveal={handleAnswerReveal}
+        onQuestionLiveEdit={handleQuestionLiveEdit}
       />
       <PlayerManagementForm />
     </section>

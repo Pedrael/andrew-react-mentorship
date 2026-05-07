@@ -5,6 +5,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { GameContext, buildQuestionKey, type Player } from '../../context/GameContext';
@@ -25,6 +26,8 @@ type QuestionDialogProps = {
   disableBackdropClose?: boolean;
   showAnswer?: boolean;
   onAnswerReveal?: (questionKey: string) => void;
+  onQuestionSave?: (data: { question: string; answer: string; image?: string }) => void;
+  onLiveEdit?: (data: { question: string; answer: string; image?: string }) => void;
 };
 
 export default function QuestionDialog({
@@ -35,11 +38,16 @@ export default function QuestionDialog({
   disableBackdropClose = false,
   showAnswer = false,
   onAnswerReveal,
+  onQuestionSave,
+  onLiveEdit,
 }: QuestionDialogProps) {
   const game = useContext(GameContext);
   const [winner, setWinner] = useState<Player | null>(null);
-  // null = Stage 1 (first player to answer); non-null = Stage 2 (remaining players)
   const [wrongPlayerId, setWrongPlayerId] = useState<string | null>(null);
+  // Local editable state — initialised from props, saved to context on close
+  const [editQuestion, setEditQuestion] = useState('');
+  const [editAnswer, setEditAnswer] = useState('');
+  const [editImage, setEditImage] = useState('');
 
   if (!game) {
     throw new Error('QuestionDialog must be used inside GameProvider');
@@ -68,6 +76,13 @@ export default function QuestionDialog({
   const remainingPlayers = wrongPlayerId ? players.filter((p) => p.id !== wrongPlayerId) : [];
 
   const closeDialog = () => {
+    if (isAdmin && onQuestionSave) {
+      onQuestionSave({
+        question: editQuestion,
+        answer: editAnswer,
+        image: editImage.trim() || undefined,
+      });
+    }
     clearRevealedQuestionAnswer();
     onClose();
   };
@@ -108,6 +123,29 @@ export default function QuestionDialog({
     setWinner(revealWinnerOnGameEnd());
   };
 
+  // Sync editable fields when a new question is opened
+  useEffect(() => {
+    setEditQuestion(question?.question ?? '');
+    setEditAnswer(question?.answer ?? '');
+    setEditImage(question?.image ?? '');
+  }, [question]);
+
+  // Keep a stable ref so the broadcast effect doesn't need onLiveEdit as a dep
+  const onLiveEditRef = useRef(onLiveEdit);
+  useEffect(() => {
+    onLiveEditRef.current = onLiveEdit;
+  });
+
+  // Broadcast every field edit to the player page
+  useEffect(() => {
+    if (!isAdmin || !question) return;
+    onLiveEditRef.current?.({
+      question: editQuestion,
+      answer: editAnswer,
+      image: editImage.trim() || undefined,
+    });
+  }, [editQuestion, editAnswer, editImage, isAdmin, question]);
+
   useEffect(() => {
     if (!isOpen || !questionKey) {
       clearRevealedQuestionAnswer();
@@ -139,33 +177,64 @@ export default function QuestionDialog({
         )}
       </DialogTitle>
 
-      <DialogContent>
-        <Typography variant="body1">{question?.question}</Typography>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+        {/* Question text */}
+        {isAdmin ? (
+          <TextField
+            label="Question"
+            multiline
+            minRows={2}
+            fullWidth
+            value={editQuestion}
+            onChange={(e) => setEditQuestion(e.target.value)}
+          />
+        ) : (
+          <Typography variant="body1">{question?.question}</Typography>
+        )}
 
-        {question?.image && (
-          <img
-            src={question.image}
-            alt={`${question.category} question`}
-            loading="lazy"
-            style={{ maxWidth: '100%', marginTop: 12, borderRadius: 8 }}
+        {/* Image URL */}
+        {isAdmin && (
+          <TextField
+            label="Image URL (optional)"
+            fullWidth
+            value={editImage}
+            onChange={(e) => setEditImage(e.target.value)}
           />
         )}
 
-        {(isAdmin || isRevealingAnswer || showAnswer) && (
-          <Typography variant="subtitle2" sx={{ mt: 1.5 }}>
-            Answer: {question?.answer}
-          </Typography>
+        {/* Image preview */}
+        {(editImage || question?.image) && (
+          <img
+            src={isAdmin ? editImage : question?.image}
+            alt={`${question?.category} question`}
+            loading="lazy"
+            style={{ maxWidth: '100%', borderRadius: 8 }}
+          />
+        )}
+
+        {/* Answer */}
+        {isAdmin ? (
+          <TextField
+            label="Answer"
+            fullWidth
+            value={editAnswer}
+            onChange={(e) => setEditAnswer(e.target.value)}
+          />
+        ) : (
+          (isRevealingAnswer || showAnswer) && (
+            <Typography variant="subtitle2">Answer: {question?.answer}</Typography>
+          )
         )}
 
         {winner && (
-          <Typography variant="body1" sx={{ mt: 1.5, color: 'success.main', fontWeight: 700 }}>
+          <Typography variant="body1" sx={{ color: 'success.main', fontWeight: 700 }}>
             Winner: {winner.name}
           </Typography>
         )}
 
-        {/* Stage 2: show who got it wrong, then per-player correct-answer buttons */}
+        {/* Stage 2: show who got it wrong + per-player correct buttons */}
         {isAdmin && wrongPlayerId && (
-          <Box sx={{ mt: 2 }}>
+          <Box>
             <Typography variant="caption" color="error.main" sx={{ display: 'block', mb: 1 }}>
               ✗&nbsp;{wrongPlayer?.name ?? 'Player'} answered wrong (−{wrongAnswerPenalty} pts)
             </Typography>
