@@ -121,46 +121,6 @@
       ]
     },
     {
-      "title": "",
-      "questions": [
-        {
-          "price": 100,
-          "question": "",
-          "image": "",
-          "answer": "",
-          "isAnswered": false
-        },
-        {
-          "price": 200,
-          "question": "",
-          "image": "",
-          "answer": "",
-          "isAnswered": false
-        },
-        {
-          "price": 300,
-          "question": "",
-          "image": "",
-          "answer": "",
-          "isAnswered": false
-        },
-        {
-          "price": 400,
-          "question": "",
-          "image": "",
-          "answer": "",
-          "isAnswered": false
-        },
-        {
-          "price": 500,
-          "question": "",
-          "image": "",
-          "answer": "",
-          "isAnswered": false
-        }
-      ]
-    },
-    {
       "title": "4",
       "questions": [
         {

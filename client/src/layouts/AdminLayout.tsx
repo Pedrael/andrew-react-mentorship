@@ -1,4 +1,6 @@
 import { useCallback, useEffect } from 'react';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import JeopardyTable from '../components/jeopardy-table/JeopardyTable';
 import PlayerManagementForm from '../components/player-management-form/PlayerManagementForm';
 import type { QuestionDialogData } from '../components/question-dialog/QuestionDialog';
@@ -73,6 +75,21 @@ export default function AdminLayout() {
         onQuestionLiveEdit={handleQuestionLiveEdit}
       />
       <PlayerManagementForm />
+      <Box sx={{ mt: 4, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
+        <Button
+          variant="outlined"
+          color="error"
+          size="small"
+          onClick={() => {
+            localStorage.removeItem('jeopardy-players');
+            localStorage.removeItem('jeopardy-categories');
+            localStorage.removeItem('jeopardy-answered');
+            location.reload();
+          }}
+        >
+          Reset game (clear storage)
+        </Button>
+      </Box>
     </section>
   );
 }

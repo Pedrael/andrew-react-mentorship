@@ -72,6 +72,7 @@ export const GameContext = createContext<GameContextValue | null>(null);
 
 const CATEGORIES_STORAGE_KEY = 'jeopardy-categories';
 const PLAYERS_STORAGE_KEY = 'jeopardy-players';
+const ANSWERED_STORAGE_KEY = 'jeopardy-answered';
 
 function loadInitialCategories(): Category[] {
   try {
@@ -101,14 +102,23 @@ const defaultPlayers: Player[] = [
 const initialCategories: Category[] = loadInitialCategories();
 const initialPlayers: Player[] = loadInitialPlayers();
 
-const initialAnsweredKeys = new Set<string>();
-for (const category of initialCategories) {
-  for (const q of category.questions) {
-    if (q.isAnswered) {
-      initialAnsweredKeys.add(buildQuestionKey(category.title, q.price));
+function loadInitialAnsweredKeys(): Set<string> {
+  try {
+    const stored = localStorage.getItem(ANSWERED_STORAGE_KEY);
+    if (stored) return new Set<string>(JSON.parse(stored) as string[]);
+  } catch {
+    // corrupted storage — derive from categories as fallback
+  }
+  const keys = new Set<string>();
+  for (const category of initialCategories) {
+    for (const q of category.questions) {
+      if (q.isAnswered) keys.add(buildQuestionKey(category.title, q.price));
     }
   }
+  return keys;
 }
+
+const initialAnsweredKeys = loadInitialAnsweredKeys();
 
 export function GameProvider({ children }: GameProviderProps) {
   const [players, setPlayers] = useState<Player[]>(initialPlayers);  const [categories, setCategories] = useState<Category[]>(initialCategories);
@@ -130,7 +140,18 @@ export function GameProvider({ children }: GameProviderProps) {
       // storage quota exceeded — ignore
     }
   }, [players]);
+
   const [answeredQuestionKeys, setAnsweredQuestionKeys] =
+    useState<Set<string>>(initialAnsweredKeys);
+
+  // Persist answered question keys to localStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(ANSWERED_STORAGE_KEY, JSON.stringify([...answeredQuestionKeys]));
+    } catch {
+      // storage quota exceeded — ignore
+    }
+  }, [answeredQuestionKeys]);
     useState<Set<string>>(initialAnsweredKeys);
   const [auctionedQuestionKeys, setAuctionedQuestionKeys] = useState<Set<string>>(new Set());
   const [revealedQuestionKey, setRevealedQuestionKey] = useState<string | null>(null);
