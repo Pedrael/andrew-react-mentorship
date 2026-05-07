@@ -41,3 +41,19 @@ export const REVEAL_ANSWER_EVENT = 'reveal_answer';
 export interface RevealAnswerPayload {
   questionKey: string;
 }
+
+export const MARK_AUCTIONED_EVENT = 'mark_auctioned';
+
+export interface MarkAuctionedPayload {
+  questionKey: string;
+}
+
+export const PLAYERS_UPDATE_EVENT = 'players_update';
+
+export interface PlayerScore {
+  id: string;
+  name: string;
+  score: number;
+}
+
+export type PlayersUpdatePayload = PlayerScore[];

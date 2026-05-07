@@ -23,6 +23,7 @@ type QuestionDialogProps = {
   disableBackdropClose?: boolean;
   showAnswer?: boolean;
   onAnswerReveal?: (questionKey: string) => void;
+  onQuestionAuctioned?: (questionKey: string) => void;
 };
 
 export default function QuestionDialog({
@@ -33,6 +34,7 @@ export default function QuestionDialog({
   disableBackdropClose = false,
   showAnswer = false,
   onAnswerReveal,
+  onQuestionAuctioned,
 }: QuestionDialogProps) {
   const game = useContext(GameContext);
   const [winner, setWinner] = useState<Player | null>(null);
@@ -90,6 +92,7 @@ export default function QuestionDialog({
     if (!isAuctioned) {
       if (!selectedPlayer) return;
       subtractScore(selectedPlayer.id, wrongAnswerPenalty);
+      onQuestionAuctioned?.(questionKey);
     }
     clearRevealedQuestionAnswer();
     markQuestionAuctioned(questionKey);

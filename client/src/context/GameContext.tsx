@@ -52,6 +52,7 @@ export type GameContextValue = {
   revealQuestionAnswer: (questionKey: string) => void;
   clearRevealedQuestionAnswer: () => void;
   revealWinnerOnGameEnd: () => Player | null;
+  syncPlayers: (data: Array<{ id: string; name: string; score: number }>) => void;
 };
 
 type GameProviderProps = {
@@ -192,6 +193,18 @@ export function GameProvider({ children }: GameProviderProps) {
     });
   }, []);
 
+  const syncPlayers = useCallback(
+    (data: Array<{ id: string; name: string; score: number }>) => {
+      setPlayers((prev) =>
+        data.map((p) => {
+          const existing = prev.find((ep) => ep.id === p.id);
+          return { id: p.id, name: p.name, score: p.score, isSelected: existing?.isSelected ?? false };
+        }),
+      );
+    },
+    [],
+  );
+
   const revealWinnerOnGameEnd = () => {
     if (categories.some((category) => category.questions.some((question) => !question.isAnswered)))
       return null;
@@ -222,6 +235,7 @@ export function GameProvider({ children }: GameProviderProps) {
         revealQuestionAnswer,
         clearRevealedQuestionAnswer,
         revealWinnerOnGameEnd,
+        syncPlayers,
       }}
     >
       {children}
