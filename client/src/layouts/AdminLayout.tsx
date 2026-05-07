@@ -1,0 +1,95 @@
+import { useCallback, useEffect } from 'react';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import JeopardyTable from '../components/jeopardy-table/JeopardyTable';
+import PlayerManagementForm from '../components/player-management-form/PlayerManagementForm';
+import type { QuestionDialogData } from '../components/question-dialog/QuestionDialog';
+import { useWebSocket } from '../lib/websocket/useWebSocket';
+import {
+  OPEN_QUESTION_EVENT,
+  CLOSE_QUESTION_EVENT,
+  REVEAL_ANSWER_EVENT,
+  PLAYERS_UPDATE_EVENT,
+  UPDATE_QUESTION_EVENT,
+  SYNC_CATEGORIES_EVENT,
+  type RevealAnswerPayload,
+  type PlayersUpdatePayload,
+  type UpdateQuestionPayload,
+} from '../lib/websocket/messages';
+import { useGame } from '../hooks/useGame';
+import type { Category } from '../context/GameContext';
+
+const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080';
+
+export default function AdminLayout() {
+  const { players, categories } = useGame();
+  const { send, status } = useWebSocket({ url: WS_URL, role: 'admin' });
+
+  useEffect(() => {
+    if (status !== 'open') return;
+    send<Category[]>(SYNC_CATEGORIES_EVENT, categories);
+  }, [categories, status, send]);
+
+  useEffect(() => {
+    if (status !== 'open') return;
+    const payload: PlayersUpdatePayload = players.map(({ id, name, score }) => ({
+      id,
+      name,
+      score,
+    }));
+    send(PLAYERS_UPDATE_EVENT, payload);
+  }, [players, status, send]);
+
+  const handleQuestionOpen = useCallback(
+    (question: QuestionDialogData) => {
+      send(OPEN_QUESTION_EVENT, question);
+    },
+    [send],
+  );
+
+  const handleQuestionClose = useCallback(() => {
+    send(CLOSE_QUESTION_EVENT, null);
+  }, [send]);
+
+  const handleAnswerReveal = useCallback(
+    (questionKey: string) => {
+      send<RevealAnswerPayload>(REVEAL_ANSWER_EVENT, { questionKey });
+    },
+    [send],
+  );
+
+  const handleQuestionLiveEdit = useCallback(
+    (data: QuestionDialogData) => {
+      send<UpdateQuestionPayload>(UPDATE_QUESTION_EVENT, data);
+    },
+    [send],
+  );
+
+  return (
+    <section style={{ padding: 16 }}>
+      <JeopardyTable
+        isAdmin={true}
+        onQuestionOpen={handleQuestionOpen}
+        onQuestionClose={handleQuestionClose}
+        onAnswerReveal={handleAnswerReveal}
+        onQuestionLiveEdit={handleQuestionLiveEdit}
+      />
+      <PlayerManagementForm />
+      <Box sx={{ mt: 4, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
+        <Button
+          variant="outlined"
+          color="error"
+          size="small"
+          onClick={() => {
+            localStorage.removeItem('jeopardy-players');
+            localStorage.removeItem('jeopardy-categories');
+            localStorage.removeItem('jeopardy-answered');
+            location.reload();
+          }}
+        >
+          Reset game (clear storage)
+        </Button>
+      </Box>
+    </section>
+  );
+}

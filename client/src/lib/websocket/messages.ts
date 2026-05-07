@@ -1,0 +1,71 @@
+export type Role = 'admin' | 'player';
+
+export interface IdentifyMessage {
+  type: 'identify';
+  role: Role;
+  name?: string;
+}
+
+export interface EventMessage<TPayload = unknown> {
+  type: 'event';
+  event: string;
+  payload: TPayload;
+}
+
+export type SystemEvent = 'identified' | 'peer_joined' | 'peer_left' | 'error';
+
+export interface SystemMessage {
+  type: 'system';
+  event: SystemEvent;
+  role?: Role;
+  message?: string;
+}
+
+export type ClientMessage = IdentifyMessage | EventMessage;
+export type ServerMessage = EventMessage | SystemMessage;
+
+export const OPEN_QUESTION_EVENT = 'open_question';
+
+export interface OpenQuestionPayload {
+  category: string;
+  question: string;
+  price: number;
+  answer: string;
+  image?: string;
+}
+
+export const CLOSE_QUESTION_EVENT = 'close_question';
+
+export const REVEAL_ANSWER_EVENT = 'reveal_answer';
+
+export interface RevealAnswerPayload {
+  questionKey: string;
+}
+
+export const MARK_AUCTIONED_EVENT = 'mark_auctioned';
+
+export interface MarkAuctionedPayload {
+  questionKey: string;
+}
+
+export const PLAYERS_UPDATE_EVENT = 'players_update';
+
+export interface PlayerScore {
+  id: string;
+  name: string;
+  score: number;
+}
+
+export type PlayersUpdatePayload = PlayerScore[];
+
+export const UPDATE_QUESTION_EVENT = 'update_question';
+
+export interface UpdateQuestionPayload {
+  category: string;
+  price: number;
+  question: string;
+  answer: string;
+  image?: string;
+}
+
+export const SYNC_CATEGORIES_EVENT = 'sync_categories';
