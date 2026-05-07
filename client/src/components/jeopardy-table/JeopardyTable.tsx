@@ -12,9 +12,17 @@ import { GameContext, buildQuestionKey } from '../../context/GameContext';
 
 type JeopardyTableProps = {
   isAdmin: boolean;
+  onQuestionOpen?: (question: QuestionDialogData) => void;
+  onQuestionClose?: () => void;
+  onAnswerReveal?: (questionKey: string) => void;
 };
 
-export default function JeopardyTable({ isAdmin = false }: JeopardyTableProps) {
+export default function JeopardyTable({
+  isAdmin = false,
+  onQuestionOpen,
+  onQuestionClose,
+  onAnswerReveal,
+}: JeopardyTableProps) {
   const game = React.useContext(GameContext);
 
   if (!game) {
@@ -69,9 +77,12 @@ export default function JeopardyTable({ isAdmin = false }: JeopardyTableProps) {
   const onCellClick = (cellData: QuestionDialogData) => {
     setSelectedQuestion(cellData);
     setIsDialogOpen(true);
+    if (isAdmin) onQuestionOpen?.(cellData);
   };
 
   const onDialogClose = () => {
+    if (isAdmin) onQuestionClose?.();
+
     if (dialogCloseTimeoutRef.current) {
       clearTimeout(dialogCloseTimeoutRef.current);
     }
@@ -153,6 +164,7 @@ export default function JeopardyTable({ isAdmin = false }: JeopardyTableProps) {
         isAdmin={isAdmin}
         isOpen={isDialogOpen}
         onClose={onDialogClose}
+        onAnswerReveal={onAnswerReveal}
         disableBackdropClose
       />
     </>

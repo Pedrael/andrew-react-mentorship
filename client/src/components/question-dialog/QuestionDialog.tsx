@@ -21,6 +21,8 @@ type QuestionDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   disableBackdropClose?: boolean;
+  showAnswer?: boolean;
+  onAnswerReveal?: (questionKey: string) => void;
 };
 
 export default function QuestionDialog({
@@ -29,6 +31,8 @@ export default function QuestionDialog({
   isOpen,
   onClose,
   disableBackdropClose = false,
+  showAnswer = false,
+  onAnswerReveal,
 }: QuestionDialogProps) {
   const game = useContext(GameContext);
 
@@ -74,6 +78,7 @@ export default function QuestionDialog({
     addScore(selectedPlayer.id, scoreDelta);
     markQuestionAnswered(questionKey);
     selectNextPlayer();
+    onAnswerReveal?.(questionKey);
   };
 
   const handleMarkAsAuctioned = () => {
@@ -125,7 +130,7 @@ export default function QuestionDialog({
             style={{ maxWidth: '100%', marginTop: 12, borderRadius: 8 }}
           />
         )}
-        {(isAdmin || isRevealingAnswer) && (
+        {(isAdmin || isRevealingAnswer || showAnswer) && (
           <Typography variant="subtitle2" sx={{ mt: 1.5 }}>
             Answer: {question?.answer}
           </Typography>

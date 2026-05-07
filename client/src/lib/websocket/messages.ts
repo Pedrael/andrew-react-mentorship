@@ -23,3 +23,21 @@ export interface SystemMessage {
 
 export type ClientMessage = IdentifyMessage | EventMessage;
 export type ServerMessage = EventMessage | SystemMessage;
+
+export const OPEN_QUESTION_EVENT = 'open_question';
+
+export interface OpenQuestionPayload {
+  category: string;
+  question: string;
+  price: number;
+  answer: string;
+  image?: string;
+}
+
+export const CLOSE_QUESTION_EVENT = 'close_question';
+
+export const REVEAL_ANSWER_EVENT = 'reveal_answer';
+
+export interface RevealAnswerPayload {
+  questionKey: string;
+}
