@@ -124,8 +124,10 @@ export default function JeopardyTable({
                 {prices.map((price) => {
                   const questionKey = buildQuestionKey(category, price);
                   const cellQuestion: QuestionDialogData | undefined = questionMap.get(questionKey);
+                  const isAnswered = answeredQuestionKeys.has(questionKey);
                   const isAuctioned = auctionedQuestionKeys.has(questionKey);
-                  const isDisabled = !cellQuestion || answeredQuestionKeys.has(questionKey);
+                  const hasNoQuestion = !cellQuestion;
+                  const isDisabled = hasNoQuestion || isAnswered;
 
                   return (
                     <TableCell
@@ -135,14 +137,18 @@ export default function JeopardyTable({
                         verticalAlign: 'top',
                         wordBreak: 'break-word',
                         whiteSpace: 'normal',
-                        borderRight: '1px solid rgba(224, 224, 224, 1)',
-                        opacity: isDisabled ? 0.45 : 1,
+                        opacity: hasNoQuestion ? 0.35 : 1,
                         cursor: isDisabled ? 'default' : 'pointer',
                         userSelect: 'none',
                         height: 64,
                         paddingTop: 1,
                         paddingBottom: 1,
-                        backgroundColor: isAuctioned ? 'rgba(255, 193, 7, 0.15)' : 'inherit',
+                        backgroundColor: isAnswered
+                          ? '#388e3c'
+                          : isAuctioned
+                            ? 'rgba(255, 193, 7, 0.15)'
+                            : 'inherit',
+                        color: isAnswered ? '#fff' : 'inherit',
                       }}
                       onClick={() => {
                         if (isDisabled || !cellQuestion) return;

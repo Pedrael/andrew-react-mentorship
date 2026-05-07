@@ -53,7 +53,7 @@ export default function PlayerManagementForm() {
                 key={player.id}
                 sx={{
                   border: 1,
-                  borderColor: player.isSelected ? 'primary.main' : 'divider',
+                  borderColor: player.isSelected ? 'primary.main' : '#000',
                   borderRadius: 1,
                   px: 1.5,
                   py: 1,
@@ -81,7 +81,7 @@ export default function PlayerManagementForm() {
               type="text"
               onChange={(_event) => setNewPlayerName(_event.target.value)}
             />
-            <Button onClick={() => handleAddPlayer()}>Add</Button>
+            <Button variant="contained" onClick={() => handleAddPlayer()}>Add</Button>
           </Box>
         </RadioGroup>
       </FormControl>
