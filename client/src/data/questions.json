@@ -21,6 +21,18 @@
           "question": "What is the name of the subatomic particle with a negative electric charge?",
           "answer": "Electron",
           "isAnswered": false
+        },
+        {
+          "price": 400,
+          "question": "What is the name of the subatomic particle with a negative electric charge?",
+          "answer": "Electron",
+          "isAnswered": false
+        },
+        {
+          "price": 500,
+          "question": "What is the name of the subatomic particle with a negative electric charge?",
+          "answer": "Electron",
+          "isAnswered": false
         }
       ]
     },
@@ -89,6 +101,42 @@
           "price": 300,
           "question": "In filmmaking, what is the term for a series of drawings or images that create the illusion of motion?",
           "answer": "Animation",
+          "isAnswered": false
+        }
+      ]
+    },
+    {
+      "title": "Science",
+      "questions": [
+        {
+          "price": 100,
+          "question": "What is the process plants use to convert sunlight into chemical energy?",
+          "image": "https://img.magnific.com/premium-photo/cute-white-baby-rabbit-meadow-green-grass-friendship-with-cute-easter-bunny_7186-3508.jpg?w=2000",
+          "answer": "Photosynthesis",
+          "isAnswered": false
+        },
+        {
+          "price": 200,
+          "question": "What do you call the force that accelerates objects due to mass pulling them together?",
+          "answer": "Gravity",
+          "isAnswered": false
+        },
+        {
+          "price": 300,
+          "question": "What is the name of the subatomic particle with a negative electric charge?",
+          "answer": "Electron",
+          "isAnswered": false
+        },
+        {
+          "price": 400,
+          "question": "What is the name of the subatomic particle with a negative electric charge?",
+          "answer": "Electron",
+          "isAnswered": false
+        },
+        {
+          "price": 500,
+          "question": "What is the name of the subatomic particle with a negative electric charge?",
+          "answer": "Electron",
           "isAnswered": false
         }
       ]

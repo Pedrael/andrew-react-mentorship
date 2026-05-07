@@ -15,7 +15,6 @@ type JeopardyTableProps = {
   onQuestionOpen?: (question: QuestionDialogData) => void;
   onQuestionClose?: () => void;
   onAnswerReveal?: (questionKey: string) => void;
-  onQuestionAuctioned?: (questionKey: string) => void;
 };
 
 export default function JeopardyTable({
@@ -23,7 +22,6 @@ export default function JeopardyTable({
   onQuestionOpen,
   onQuestionClose,
   onAnswerReveal,
-  onQuestionAuctioned,
 }: JeopardyTableProps) {
   const game = React.useContext(GameContext);
 
@@ -173,7 +171,6 @@ export default function JeopardyTable({
         isOpen={isDialogOpen}
         onClose={onDialogClose}
         onAnswerReveal={onAnswerReveal}
-        onQuestionAuctioned={onQuestionAuctioned}
         disableBackdropClose
       />
     </>

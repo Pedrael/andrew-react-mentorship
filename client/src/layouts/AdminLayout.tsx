@@ -7,10 +7,8 @@ import {
   OPEN_QUESTION_EVENT,
   CLOSE_QUESTION_EVENT,
   REVEAL_ANSWER_EVENT,
-  MARK_AUCTIONED_EVENT,
   PLAYERS_UPDATE_EVENT,
   type RevealAnswerPayload,
-  type MarkAuctionedPayload,
   type PlayersUpdatePayload,
 } from '../lib/websocket/messages';
 import { useGame } from '../hooks/useGame';
@@ -21,7 +19,6 @@ export default function AdminLayout() {
   const { players } = useGame();
   const { send, status } = useWebSocket({ url: WS_URL, role: 'admin' });
 
-  // Broadcast the full player list whenever scores/roster change or the socket opens
   useEffect(() => {
     if (status !== 'open') return;
     const payload: PlayersUpdatePayload = players.map(({ id, name, score }) => ({
@@ -50,13 +47,6 @@ export default function AdminLayout() {
     [send],
   );
 
-  const handleQuestionAuctioned = useCallback(
-    (questionKey: string) => {
-      send<MarkAuctionedPayload>(MARK_AUCTIONED_EVENT, { questionKey });
-    },
-    [send],
-  );
-
   return (
     <section style={{ padding: 16 }}>
       <JeopardyTable
@@ -64,7 +54,6 @@ export default function AdminLayout() {
         onQuestionOpen={handleQuestionOpen}
         onQuestionClose={handleQuestionClose}
         onAnswerReveal={handleAnswerReveal}
-        onQuestionAuctioned={handleQuestionAuctioned}
       />
       <PlayerManagementForm />
     </section>
