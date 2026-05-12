@@ -6,17 +6,20 @@ import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
-import { useState, type ChangeEvent } from 'react';
+import { useReducer, useState, type ChangeEvent } from 'react';
 import { useGame } from '../../hooks/useGame';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
 import type { Player } from '../../context/GameContext';
+import { reducer, initialState } from '../../state/GameReducer';
 
 export default function PlayerManagementForm() {
+  const [, dispatch] = useReducer(reducer, initialState);
+
   const [newPlayerName, setNewPlayerName] = useState<string>('');
 
-  const { players, addPlayer, deletePlayer, selectPlayer } = useGame();
+  const { players, deletePlayer, selectPlayer } = useGame();
   const selectedPlayerId = players.find((player) => player.isSelected)?.id ?? '';
 
   const handleChange = (_event: ChangeEvent<HTMLInputElement>, value: string) => {
@@ -30,7 +33,8 @@ export default function PlayerManagementForm() {
       score: 0,
       isSelected: false,
     };
-    addPlayer(newPlayer);
+    // addPlayer(newPlayer);
+    dispatch({ type: 'addPlayer', payload: newPlayer });
   };
 
   const handleDeletePlayer = (playerId: string) => {
@@ -81,7 +85,9 @@ export default function PlayerManagementForm() {
               type="text"
               onChange={(_event) => setNewPlayerName(_event.target.value)}
             />
-            <Button variant="contained" onClick={() => handleAddPlayer()}>Add</Button>
+            <Button variant="contained" onClick={() => handleAddPlayer()}>
+              Add
+            </Button>
           </Box>
         </RadioGroup>
       </FormControl>
