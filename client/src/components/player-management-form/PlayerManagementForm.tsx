@@ -15,11 +15,12 @@ import type { Player } from '../../context/GameContext';
 import { reducer, initialState } from '../../state/GameReducer';
 
 export default function PlayerManagementForm() {
-  const [, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const { players } = state;
 
   const [newPlayerName, setNewPlayerName] = useState<string>('');
 
-  const { players, deletePlayer, selectPlayer } = useGame();
+  const { selectPlayer } = useGame();
   const selectedPlayerId = players.find((player) => player.isSelected)?.id ?? '';
 
   const handleChange = (_event: ChangeEvent<HTMLInputElement>, value: string) => {
@@ -38,7 +39,7 @@ export default function PlayerManagementForm() {
   };
 
   const handleDeletePlayer = (playerId: string) => {
-    deletePlayer(playerId);
+    dispatch({ type: 'deletePlayer', payload: playerId });
   };
 
   return (

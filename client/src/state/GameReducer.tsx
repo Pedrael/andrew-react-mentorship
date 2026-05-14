@@ -61,11 +61,18 @@ const actions = {
     ...state,
     players: [...state.players, player],
   }),
+  deletePlayer: (state: GameState, playerId: string) => ({
+    ...state,
+    players: state.players.filter((player) => player.id !== playerId),
+  }),
 };
 
-export type GameAction = { type: 'addPlayer'; payload: Player };
+export type GameAction =
+  | { type: 'addPlayer'; payload: Player }
+  | { type: 'deletePlayer'; payload: string };
 
 export function reducer(state: GameState, action: GameAction): GameState {
   if (action.type === 'addPlayer') return actions.addPlayer(state, action.payload);
+  if (action.type === 'deletePlayer') return actions.deletePlayer(state, action.payload);
   return state;
 }
