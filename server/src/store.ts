@@ -6,7 +6,7 @@ import type { CategoriesFile, Category, Player } from './types.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const DATA_DIR = process.env.DATA_DIR ?? join(__dirname, '..', 'data');
+export const DATA_DIR = process.env.DATA_DIR ?? join(__dirname, '..', 'data');
 const PLAYERS_PATH = join(DATA_DIR, 'players.json');
 const CATEGORIES_PATH = join(DATA_DIR, 'categories.json');
 

@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { ensureAuthUsersFile } from './auth.js';
 import { handleHttpApi } from './httpApi.js';
 import { attachWebSocket } from './websocket.js';
 import { ensureStoreInitialized } from './store.js';
@@ -7,6 +8,7 @@ const PORT = Number(process.env.PORT ?? 8080);
 const HOST = process.env.HOST ?? '0.0.0.0';
 
 await ensureStoreInitialized();
+await ensureAuthUsersFile();
 
 const server = createServer(async (req, res) => {
   try {

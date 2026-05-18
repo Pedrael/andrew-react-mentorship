@@ -2,6 +2,12 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import type { Category, Player, Question } from './types.js';
 import {
+  getBearerToken,
+  readTokenRequestParams,
+  tryPasswordGrant,
+  validateAccessToken,
+} from './auth.js';
+import {
   defaultJeopardyQuestions,
   editCategories,
   readCategoriesRoot,
@@ -21,7 +27,7 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 function setCors(res: ServerResponse): void {
   res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN ?? '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
 export async function parseJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -109,6 +115,13 @@ function matchRoute(
   return { name: pattern, params };
 }
 
+function isPublicApiRoute(method: string, pathname: string): boolean {
+  return (
+    matchRoute(method, pathname, 'GET /api/health') !== null ||
+    matchRoute(method, pathname, 'POST /api/oauth/token') !== null
+  );
+}
+
 export async function handleHttpApi(
   req: IncomingMessage,
   res: ServerResponse,
@@ -132,8 +145,59 @@ export async function handleHttpApi(
   }
 
   try {
+    let m = matchRoute(req.method, pathname, 'POST /api/oauth/token');
+    if (m) {
+      let params: Record<string, string>;
+      try {
+        params = await readTokenRequestParams(req);
+      } catch {
+        sendJson(res, 400, {
+          error: 'invalid_request',
+          error_description: 'Could not parse request body as JSON or form-urlencoded',
+        });
+        return true;
+      }
+      const grantType = params.grant_type ?? '';
+      if (grantType !== 'password') {
+        sendJson(res, 400, {
+          error: 'unsupported_grant_type',
+          error_description: 'Only grant_type=password is supported',
+        });
+        return true;
+      }
+      const username = params.username ?? '';
+      const password = params.password ?? '';
+      const issued = await tryPasswordGrant(username, password);
+      if (!issued) {
+        sendJson(res, 400, {
+          error: 'invalid_grant',
+          error_description: 'Invalid username or password',
+        });
+        return true;
+      }
+      sendJson(res, 200, {
+        access_token: issued.accessToken,
+        token_type: 'Bearer',
+        expires_in: issued.expiresIn,
+      });
+      return true;
+    }
+
+    if (!isPublicApiRoute(req.method, pathname)) {
+      const token = getBearerToken(req);
+      if (!token || !validateAccessToken(token)) {
+        res.statusCode = 401;
+        res.setHeader('WWW-Authenticate', 'Bearer realm="api"');
+        sendJson(res, 401, {
+          error: 'invalid_token',
+          error_description: 'Missing or invalid access token; obtain one via POST /api/oauth/token',
+        });
+        return true;
+      }
+    }
+
     // --- Players ---
-    let m = matchRoute(req.method, pathname, 'GET /api/players');
+    m = matchRoute(req.method, pathname, 'GET /api/players');
     if (m) {
       const players = await readPlayers();
       sendJson(res, 200, players);

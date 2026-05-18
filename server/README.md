@@ -31,6 +31,9 @@ PORT=9000 HOST=127.0.0.1 npm run dev
 | `HOST`        | `0.0.0.0`      | Bind address |
 | `DATA_DIR`    | `server/data`  | Directory for JSON stores |
 | `CORS_ORIGIN` | `*`          | `Access-Control-Allow-Origin` for browser clients |
+| `DEFAULT_AUTH_USERNAME` | `admin` | Only used when creating `users.json` on first boot |
+| `DEFAULT_AUTH_PASSWORD` | `password` | Only used when creating `users.json` on first boot |
+| `ACCESS_TOKEN_TTL_MS` | `86400000` (24h) | Access token lifetime in memory |
 
 ## Data files
 
@@ -40,6 +43,7 @@ Created on first run under `DATA_DIR`:
 |-------------------|----------|
 | `players.json`    | JSON array of player objects |
 | `categories.json` | `{ "categories": Category[] }` |
+| `users.json`      | `{ "users": [...] }` — auth users with scrypt `passwordSalt` / `passwordHash` (no plaintext passwords) |
 
 Types mirror the client (`Player`, `Category`, `Question` in `src/types.ts`).
 
@@ -51,7 +55,60 @@ All API responses use `Content-Type: application/json` unless noted.
 
 Errors typically return `{ "error": "message" }` with status `400`, `404`, or `500`.
 
+OAuth-style errors use `error` and `error_description` (RFC 6749-style field names).
+
 `OPTIONS` is supported on `/api` routes for CORS preflight.
+
+### Authentication (OAuth2-style password grant)
+
+Most `/api` routes require a valid **Bearer** access token:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+**Public routes** (no `Authorization` header):
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/health` | Liveness |
+| `POST` | `/api/oauth/token` | Issue an access token (password grant) |
+
+**`POST /api/oauth/token`**
+
+Accepts **`application/json`** or **`application/x-www-form-urlencoded`**.
+
+Body / fields:
+
+- `grant_type` — must be `password`
+- `username` — must match a user in `users.json`
+- `password` — plaintext password checked against the stored hash
+
+**JSON example**
+
+```json
+{
+  "grant_type": "password",
+  "username": "admin",
+  "password": "password"
+}
+```
+
+**Success** `200`
+
+```json
+{
+  "access_token": "<opaque hex string>",
+  "token_type": "Bearer",
+  "expires_in": 86400
+}
+```
+
+**Failures** `400` — e.g. `{ "error": "invalid_grant", ... }`, `{ "error": "unsupported_grant_type", ... }`
+
+**Missing or invalid token on protected routes** `401` — `WWW-Authenticate: Bearer realm="api"` and `{ "error": "invalid_token", ... }`
+
+Tokens are kept **in memory** only (lost on server restart). WebSocket connections are **not** authenticated by this mechanism.
 
 ### Health
 
