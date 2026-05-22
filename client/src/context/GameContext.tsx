@@ -121,7 +121,8 @@ function loadInitialAnsweredKeys(): Set<string> {
 const initialAnsweredKeys = loadInitialAnsweredKeys();
 
 export function GameProvider({ children }: GameProviderProps) {
-  const [players, setPlayers] = useState<Player[]>(initialPlayers);  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [players, setPlayers] = useState<Player[]>(initialPlayers);
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
 
   // Persist categories to localStorage on every change
   useEffect(() => {
@@ -152,7 +153,7 @@ export function GameProvider({ children }: GameProviderProps) {
       // storage quota exceeded — ignore
     }
   }, [answeredQuestionKeys]);
-    useState<Set<string>>(initialAnsweredKeys);
+  useState<Set<string>>(initialAnsweredKeys);
   const [auctionedQuestionKeys, setAuctionedQuestionKeys] = useState<Set<string>>(new Set());
   const [revealedQuestionKey, setRevealedQuestionKey] = useState<string | null>(null);
   const addPlayer = (player: Player) => {
@@ -235,7 +236,12 @@ export function GameProvider({ children }: GameProviderProps) {
         ...prev,
         {
           title: `Category ${prev.length + 1}`,
-          questions: prices.map((price) => ({ price, question: '', answer: '', isAnswered: false })),
+          questions: prices.map((price) => ({
+            price,
+            question: '',
+            answer: '',
+            isAnswered: false,
+          })),
         },
       ];
     });
@@ -303,17 +309,19 @@ export function GameProvider({ children }: GameProviderProps) {
     });
   }, []);
 
-  const syncPlayers = useCallback(
-    (data: Array<{ id: string; name: string; score: number }>) => {
-      setPlayers((prev) =>
-        data.map((p) => {
-          const existing = prev.find((ep) => ep.id === p.id);
-          return { id: p.id, name: p.name, score: p.score, isSelected: existing?.isSelected ?? false };
-        }),
-      );
-    },
-    [],
-  );
+  const syncPlayers = useCallback((data: Array<{ id: string; name: string; score: number }>) => {
+    setPlayers((prev) =>
+      data.map((p) => {
+        const existing = prev.find((ep) => ep.id === p.id);
+        return {
+          id: p.id,
+          name: p.name,
+          score: p.score,
+          isSelected: existing?.isSelected ?? false,
+        };
+      }),
+    );
+  }, []);
 
   const revealWinnerOnGameEnd = () => {
     if (categories.some((category) => category.questions.some((question) => !question.isAnswered)))

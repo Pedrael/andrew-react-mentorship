@@ -12,10 +12,10 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
 import type { Player } from '../../context/GameContext';
-import { reducer, initialState } from '../../state/GameReducer';
+import { rootReducer, initialState } from '../../state/RootReducer';
 
 export default function PlayerManagementForm() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(rootReducer, initialState);
   const { players } = state;
 
   const [newPlayerName, setNewPlayerName] = useState<string>('');
