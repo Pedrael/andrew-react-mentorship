@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, type Dispatch } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import JeopardyTable from '../components/jeopardy-table/JeopardyTable';
@@ -16,13 +16,17 @@ import {
   type PlayersUpdatePayload,
   type UpdateQuestionPayload,
 } from '../lib/websocket/messages';
-import { useGame } from '../hooks/useGame';
-import type { Category } from '../context/GameContext';
+import type { Category, GameAction, GameState } from '../state/RootReducer';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080';
 
-export default function AdminLayout() {
-  const { players, categories } = useGame();
+type AdminLayoutProps = {
+  state: GameState;
+  dispatch: Dispatch<GameAction>;
+};
+
+export default function AdminLayout({ state, dispatch }: AdminLayoutProps) {
+  const { players, categories } = state;
   const { send, status } = useWebSocket({ url: WS_URL, role: 'admin' });
 
   useEffect(() => {
@@ -68,13 +72,15 @@ export default function AdminLayout() {
   return (
     <section style={{ padding: 16 }}>
       <JeopardyTable
+        state={state}
+        dispatch={dispatch}
         isAdmin={true}
         onQuestionOpen={handleQuestionOpen}
         onQuestionClose={handleQuestionClose}
         onAnswerReveal={handleAnswerReveal}
         onQuestionLiveEdit={handleQuestionLiveEdit}
       />
-      <PlayerManagementForm />
+      <PlayerManagementForm state={state} dispatch={dispatch} />
       <Box sx={{ mt: 4, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
         <Button
           variant="outlined"

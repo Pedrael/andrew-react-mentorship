@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Dispatch } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import InputBase from '@mui/material/InputBase';
@@ -11,9 +12,12 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import QuestionDialog from '../question-dialog/QuestionDialog';
 import type { QuestionDialogData } from '../question-dialog/QuestionDialog';
-import { GameContext, buildQuestionKey } from '../../context/GameContext';
+import { buildQuestionKey } from '../../state/QuestionReducer';
+import type { GameAction, GameState } from '../../state/RootReducer';
 
 type JeopardyTableProps = {
+  state: GameState;
+  dispatch: Dispatch<GameAction>;
   isAdmin: boolean;
   onQuestionOpen?: (question: QuestionDialogData) => void;
   onQuestionClose?: () => void;
@@ -22,26 +26,19 @@ type JeopardyTableProps = {
 };
 
 export default function JeopardyTable({
+  state,
+  dispatch,
   isAdmin = false,
   onQuestionOpen,
   onQuestionClose,
   onAnswerReveal,
   onQuestionLiveEdit,
 }: JeopardyTableProps) {
-  const game = React.useContext(GameContext);
-
-  if (!game) {
-    throw new Error('JeopardyTable must be used inside GameProvider');
-  }
-
   const {
     categories: categoriesData,
     answeredQuestionKeys,
     auctionedQuestionKeys,
-    addCategory,
-    updateCategoryTitle,
-    updateQuestion,
-  } = game;
+  } = state;
 
   const [selectedQuestion, setSelectedQuestion] = React.useState<QuestionDialogData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
@@ -92,7 +89,8 @@ export default function JeopardyTable({
     categoryIndex: number,
     price: number,
   ) => {
-    questionSaverRef.current = (data) => updateQuestion(categoryIndex, price, data);
+    questionSaverRef.current = (data) =>
+      dispatch({ type: 'updateQuestion', payload: { categoryIndex, price, data } });
     questionLiveEditRef.current = (data) => onQuestionLiveEdit?.({ ...cellData, ...data });
     setSelectedQuestion(cellData);
     setIsDialogOpen(true);
@@ -147,7 +145,12 @@ export default function JeopardyTable({
                   {isAdmin ? (
                     <InputBase
                       value={cat.title}
-                      onChange={(e) => updateCategoryTitle(catIdx, e.target.value)}
+                      onChange={(e) =>
+                        dispatch({
+                          type: 'updateCategoryTitle',
+                          payload: { index: catIdx, newTitle: e.target.value },
+                        })
+                      }
                       inputProps={{ 'aria-label': 'category name' }}
                       sx={{
                         fontWeight: 700,
@@ -236,13 +239,19 @@ export default function JeopardyTable({
 
       {isAdmin && (
         <Box sx={{ mt: 1 }}>
-          <Button variant="outlined" onClick={addCategory} sx={{ borderStyle: 'dashed' }}>
+          <Button
+            variant="outlined"
+            onClick={() => dispatch({ type: 'addCategory' })}
+            sx={{ borderStyle: 'dashed' }}
+          >
             + Add category
           </Button>
         </Box>
       )}
 
       <QuestionDialog
+        state={state}
+        dispatch={dispatch}
         question={selectedQuestion}
         isAdmin={isAdmin}
         isOpen={isDialogOpen}

@@ -1,25 +1,17 @@
-import playerReducer, { type PlayerAction } from './PlayerReducer.ts';
-import questionReducer, { type QuestionAction, loadInitialCategories } from './QuestionReducer.ts';
+import playerReducer, {
+  loadInitialPlayers,
+  type PlayerAction,
+  type Player,
+} from './PlayerReducer.ts';
+import questionReducer, {
+  loadInitialCategories,
+  loadInitialAnsweredKeys,
+  type QuestionAction,
+  type Category,
+  type Question,
+} from './QuestionReducer.ts';
 
-export type Player = {
-  id: string;
-  name: string;
-  score: number;
-  isSelected: boolean;
-};
-
-export type Question = {
-  price: number;
-  question: string;
-  answer: string;
-  image?: string;
-  isAnswered?: boolean;
-};
-
-export type Category = {
-  title: string;
-  questions: Question[];
-};
+export type { Player, Category, Question };
 
 export type FlatQuestion = Question & {
   category: string;
@@ -28,27 +20,76 @@ export type FlatQuestion = Question & {
 export type GameState = {
   players: Player[];
   categories: Category[];
-  answeredQuestionKeys: string[];
-  auctionedQuestionKeys: string[];
+  answeredQuestionKeys: Set<string>;
+  auctionedQuestionKeys: Set<string>;
   revealedQuestionKey: string | null;
-};
-
-export const initialState: GameState = {
-  players: [],
-  categories: loadInitialCategories(),
-  answeredQuestionKeys: [],
-  auctionedQuestionKeys: [],
-  revealedQuestionKey: null,
 };
 
 export type GameAction = PlayerAction | QuestionAction;
 
+const PLAYER_ACTION_TYPES = new Set<GameAction['type']>([
+  'addPlayer',
+  'deletePlayer',
+  'addScore',
+  'subtractScore',
+  'resetScores',
+  'selectPlayer',
+  'selectNextPlayer',
+  'syncPlayers',
+]);
+
+export function buildInitialState(): GameState {
+  const categories = loadInitialCategories();
+  return {
+    players: loadInitialPlayers(),
+    categories,
+    answeredQuestionKeys: loadInitialAnsweredKeys(categories),
+    auctionedQuestionKeys: new Set<string>(),
+    revealedQuestionKey: null,
+  };
+}
+
+export const initialState: GameState = buildInitialState();
+
+export function selectWinnerIfGameEnded(state: GameState): Player | null {
+  if (
+    state.categories.some((category) =>
+      category.questions.some((question) => !question.isAnswered),
+    )
+  ) {
+    return null;
+  }
+  if (state.players.length === 0) return null;
+  return state.players.reduce(
+    (max, player) => (player.score > max.score ? player : max),
+    state.players[0],
+  );
+}
+
 export function rootReducer(state: GameState, action: GameAction): GameState {
-  if (action.type === 'addPlayer' || action.type === 'deletePlayer') {
-    return { ...state, ...playerReducer({ players: state.players }, action) };
+  if (PLAYER_ACTION_TYPES.has(action.type)) {
+    const { players } = playerReducer({ players: state.players }, action as PlayerAction);
+    return players === state.players ? state : { ...state, players };
   }
-  if (action.type === 'addCategory') {
-    return { ...state, ...questionReducer({ categories: state.categories }, action) };
+
+  const next = questionReducer(
+    {
+      categories: state.categories,
+      answeredQuestionKeys: state.answeredQuestionKeys,
+      auctionedQuestionKeys: state.auctionedQuestionKeys,
+      revealedQuestionKey: state.revealedQuestionKey,
+    },
+    action as QuestionAction,
+  );
+
+  if (
+    next.categories === state.categories &&
+    next.answeredQuestionKeys === state.answeredQuestionKeys &&
+    next.auctionedQuestionKeys === state.auctionedQuestionKeys &&
+    next.revealedQuestionKey === state.revealedQuestionKey
+  ) {
+    return state;
   }
-  return state;
+
+  return { ...state, ...next };
 }

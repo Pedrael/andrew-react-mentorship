@@ -7,8 +7,14 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useContext, useEffect, useRef, useState } from 'react';
-import { GameContext, buildQuestionKey, type Player } from '../../context/GameContext';
+import { useEffect, useRef, useState, type Dispatch } from 'react';
+import { buildQuestionKey } from '../../state/QuestionReducer';
+import {
+  selectWinnerIfGameEnded,
+  type GameAction,
+  type GameState,
+  type Player,
+} from '../../state/RootReducer';
 
 export type QuestionDialogData = {
   category: string;
@@ -19,6 +25,8 @@ export type QuestionDialogData = {
 };
 
 type QuestionDialogProps = {
+  state: GameState;
+  dispatch: Dispatch<GameAction>;
   question: QuestionDialogData | null;
   isAdmin: boolean;
   isOpen: boolean;
@@ -31,6 +39,8 @@ type QuestionDialogProps = {
 };
 
 export default function QuestionDialog({
+  state,
+  dispatch,
   question,
   isAdmin = false,
   isOpen,
@@ -41,29 +51,13 @@ export default function QuestionDialog({
   onQuestionSave,
   onLiveEdit,
 }: QuestionDialogProps) {
-  const game = useContext(GameContext);
+  const { players, revealedQuestionKey } = state;
   const [winner, setWinner] = useState<Player | null>(null);
   const [wrongPlayerId, setWrongPlayerId] = useState<string | null>(null);
   // Local editable state — initialised from props, saved to context on close
   const [editQuestion, setEditQuestion] = useState('');
   const [editAnswer, setEditAnswer] = useState('');
   const [editImage, setEditImage] = useState('');
-
-  if (!game) {
-    throw new Error('QuestionDialog must be used inside GameProvider');
-  }
-
-  const {
-    players,
-    addScore,
-    subtractScore,
-    selectNextPlayer,
-    markQuestionAnswered,
-    revealedQuestionKey,
-    revealQuestionAnswer,
-    clearRevealedQuestionAnswer,
-    revealWinnerOnGameEnd,
-  } = game;
 
   const selectedPlayer = players.find((p) => p.isSelected);
   const scoreDelta = question?.price ?? 0;
@@ -83,7 +77,7 @@ export default function QuestionDialog({
         image: editImage.trim() || undefined,
       });
     }
-    clearRevealedQuestionAnswer();
+    dispatch({ type: 'clearRevealedQuestionAnswer' });
     onClose();
   };
 
@@ -97,30 +91,33 @@ export default function QuestionDialog({
   // Stage 1 — selected player answered correctly
   const handleCorrectAnswerStage1 = () => {
     if (!selectedPlayer || !question || !questionKey) return;
-    revealQuestionAnswer(questionKey);
-    addScore(selectedPlayer.id, scoreDelta);
-    markQuestionAnswered(questionKey);
-    selectNextPlayer();
+    dispatch({ type: 'revealQuestionAnswer', payload: questionKey });
+    dispatch({ type: 'addScore', payload: { playerId: selectedPlayer.id, points: scoreDelta } });
+    dispatch({ type: 'markQuestionAnswered', payload: questionKey });
+    dispatch({ type: 'selectNextPlayer' });
     onAnswerReveal?.(questionKey);
-    setWinner(revealWinnerOnGameEnd());
+    setWinner(selectWinnerIfGameEnded(state));
   };
 
   // Stage 1 — selected player answered wrong
   const handleWrongAnswer = () => {
     if (!selectedPlayer || !question) return;
-    subtractScore(selectedPlayer.id, wrongAnswerPenalty);
+    dispatch({
+      type: 'subtractScore',
+      payload: { playerId: selectedPlayer.id, points: wrongAnswerPenalty },
+    });
     setWrongPlayerId(selectedPlayer.id);
   };
 
   // Stage 2 — one of the remaining players answered correctly
   const handleCorrectAnswerStage2 = (player: Player) => {
     if (!question || !questionKey) return;
-    revealQuestionAnswer(questionKey);
-    addScore(player.id, scoreDelta);
-    markQuestionAnswered(questionKey);
-    selectNextPlayer();
+    dispatch({ type: 'revealQuestionAnswer', payload: questionKey });
+    dispatch({ type: 'addScore', payload: { playerId: player.id, points: scoreDelta } });
+    dispatch({ type: 'markQuestionAnswered', payload: questionKey });
+    dispatch({ type: 'selectNextPlayer' });
     onAnswerReveal?.(questionKey);
-    setWinner(revealWinnerOnGameEnd());
+    setWinner(selectWinnerIfGameEnded(state));
   };
 
   // Sync editable fields when a new question is opened
@@ -148,7 +145,7 @@ export default function QuestionDialog({
 
   useEffect(() => {
     if (!isOpen || !questionKey) {
-      clearRevealedQuestionAnswer();
+      dispatch({ type: 'clearRevealedQuestionAnswer' });
       setWrongPlayerId(null);
       setWinner(null);
       previousQuestionKeyRef.current = questionKey;
@@ -156,13 +153,13 @@ export default function QuestionDialog({
     }
 
     if (previousQuestionKeyRef.current && previousQuestionKeyRef.current !== questionKey) {
-      clearRevealedQuestionAnswer();
+      dispatch({ type: 'clearRevealedQuestionAnswer' });
       setWrongPlayerId(null);
       setWinner(null);
     }
 
     previousQuestionKeyRef.current = questionKey;
-  }, [isOpen, questionKey, clearRevealedQuestionAnswer]);
+  }, [isOpen, questionKey, dispatch]);
 
   const wrongPlayer = wrongPlayerId ? players.find((p) => p.id === wrongPlayerId) : null;
 

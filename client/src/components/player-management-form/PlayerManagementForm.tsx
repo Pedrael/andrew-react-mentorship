@@ -6,25 +6,26 @@ import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
-import { useReducer, useState, type ChangeEvent } from 'react';
-import { useGame } from '../../hooks/useGame';
+import { useState, type ChangeEvent, type Dispatch } from 'react';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
-import type { Player } from '../../context/GameContext';
-import { rootReducer, initialState } from '../../state/RootReducer';
+import type { GameAction, GameState, Player } from '../../state/RootReducer';
 
-export default function PlayerManagementForm() {
-  const [state, dispatch] = useReducer(rootReducer, initialState);
+type PlayerManagementFormProps = {
+  state: GameState;
+  dispatch: Dispatch<GameAction>;
+};
+
+export default function PlayerManagementForm({ state, dispatch }: PlayerManagementFormProps) {
   const { players } = state;
 
   const [newPlayerName, setNewPlayerName] = useState<string>('');
 
-  const { selectPlayer } = useGame();
   const selectedPlayerId = players.find((player) => player.isSelected)?.id ?? '';
 
   const handleChange = (_event: ChangeEvent<HTMLInputElement>, value: string) => {
-    selectPlayer(value);
+    dispatch({ type: 'selectPlayer', payload: value });
   };
 
   const handleAddPlayer = () => {
@@ -34,7 +35,6 @@ export default function PlayerManagementForm() {
       score: 0,
       isSelected: false,
     };
-    // addPlayer(newPlayer);
     dispatch({ type: 'addPlayer', payload: newPlayer });
   };
 
