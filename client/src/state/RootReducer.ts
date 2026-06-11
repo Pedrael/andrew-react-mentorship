@@ -6,6 +6,7 @@ import playerReducer, {
 import questionReducer, {
   loadInitialCategories,
   loadInitialAnsweredKeys,
+  loadInitialFailedKeys,
   type QuestionAction,
   type Category,
   type Question,
@@ -21,6 +22,7 @@ export type GameState = {
   players: Player[];
   categories: Category[];
   answeredQuestionKeys: Set<string>;
+  failedQuestionKeys: Set<string>;
   auctionedQuestionKeys: Set<string>;
   revealedQuestionKey: string | null;
 };
@@ -44,6 +46,7 @@ export function buildInitialState(): GameState {
     players: loadInitialPlayers(),
     categories,
     answeredQuestionKeys: loadInitialAnsweredKeys(categories),
+    failedQuestionKeys: loadInitialFailedKeys(categories),
     auctionedQuestionKeys: new Set<string>(),
     revealedQuestionKey: null,
   };
@@ -76,6 +79,7 @@ export function rootReducer(state: GameState, action: GameAction): GameState {
     {
       categories: state.categories,
       answeredQuestionKeys: state.answeredQuestionKeys,
+      failedQuestionKeys: state.failedQuestionKeys,
       auctionedQuestionKeys: state.auctionedQuestionKeys,
       revealedQuestionKey: state.revealedQuestionKey,
     },
@@ -85,6 +89,7 @@ export function rootReducer(state: GameState, action: GameAction): GameState {
   if (
     next.categories === state.categories &&
     next.answeredQuestionKeys === state.answeredQuestionKeys &&
+    next.failedQuestionKeys === state.failedQuestionKeys &&
     next.auctionedQuestionKeys === state.auctionedQuestionKeys &&
     next.revealedQuestionKey === state.revealedQuestionKey
   ) {

@@ -58,8 +58,12 @@ export default function PlayerLayout({ state, dispatch }: PlayerLayoutProps) {
       } else if (event === CLOSE_QUESTION_EVENT) {
         closeDialog();
       } else if (event === REVEAL_ANSWER_EVENT) {
-        const { questionKey } = payload as RevealAnswerPayload;
-        dispatch({ type: 'markQuestionAnswered', payload: questionKey });
+        const { questionKey, outcome = 'correct' } = payload as RevealAnswerPayload;
+        if (outcome === 'failed') {
+          dispatch({ type: 'markQuestionFailed', payload: questionKey });
+        } else {
+          dispatch({ type: 'markQuestionAnswered', payload: questionKey });
+        }
         setShowAnswer(true);
       } else if (event === UPDATE_QUESTION_EVENT) {
         setOpenedQuestion(payload as UpdateQuestionPayload);

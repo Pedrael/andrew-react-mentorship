@@ -78,6 +78,9 @@ function isQuestion(value: unknown): value is Question {
   if (typeof value.question !== 'string' || typeof value.answer !== 'string') return false;
   if (value.image !== undefined && typeof value.image !== 'string') return false;
   if (value.isAnswered !== undefined && typeof value.isAnswered !== 'boolean') return false;
+  if (value.answeredCorrectly !== undefined && typeof value.answeredCorrectly !== 'boolean') {
+    return false;
+  }
   return true;
 }
 
@@ -504,6 +507,9 @@ export async function handleHttpApi(
           if (typeof body.image === 'string') q.image = body.image;
           if (body.image === null) delete q.image;
           if (typeof body.isAnswered === 'boolean') q.isAnswered = body.isAnswered;
+          if (typeof body.answeredCorrectly === 'boolean') {
+            q.answeredCorrectly = body.answeredCorrectly;
+          }
           const questions = [...cat.questions];
           if (qIdx === -1) questions.push(q);
           else questions[qIdx] = q;

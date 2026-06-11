@@ -15,6 +15,7 @@ export type Question = {
   answer: string;
   image?: string;
   isAnswered?: boolean;
+  answeredCorrectly?: boolean;
 };
 
 export type Category = {

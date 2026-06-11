@@ -23,7 +23,8 @@ type JeopardyTableProps = {
   isAdmin: boolean;
   onQuestionOpen?: (question: QuestionDialogData) => void;
   onQuestionClose?: () => void;
-  onAnswerReveal?: (questionKey: string) => void;
+  onAnswerReveal?: (questionKey: string, outcome: 'correct' | 'failed') => void;
+  onMarkAuctioned?: (questionKey: string) => void;
   onQuestionLiveEdit?: (data: QuestionDialogData) => void;
 };
 
@@ -35,9 +36,15 @@ export default function JeopardyTable({
   onQuestionOpen,
   onQuestionClose,
   onAnswerReveal,
+  onMarkAuctioned,
   onQuestionLiveEdit,
 }: JeopardyTableProps) {
-  const { categories: categoriesData, answeredQuestionKeys, auctionedQuestionKeys } = state;
+  const {
+    categories: categoriesData,
+    answeredQuestionKeys,
+    failedQuestionKeys,
+    auctionedQuestionKeys,
+  } = state;
 
   const [selectedQuestion, setSelectedQuestion] = React.useState<QuestionDialogData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
@@ -179,11 +186,13 @@ export default function JeopardyTable({
                 {prices.map((price) => {
                   const questionKey = buildQuestionKey(cat.title, price);
                   const cellQuestion = questionMap.get(questionKey);
-                  const isAnswered = answeredQuestionKeys.has(questionKey);
+                  const isAnsweredCorrectly = answeredQuestionKeys.has(questionKey);
+                  const isAnsweredFailed = failedQuestionKeys.has(questionKey);
+                  const isClosed = isAnsweredCorrectly || isAnsweredFailed;
                   const isAuctioned = auctionedQuestionKeys.has(questionKey);
                   const hasNoQuestion = !cellQuestion;
-                  // Players can't interact with empty or answered cells
-                  const isDisabled = isAnswered || (!isAdmin && hasNoQuestion);
+                  // Players can't interact with empty or closed cells
+                  const isDisabled = isClosed || (!isAdmin && hasNoQuestion);
 
                   return (
                     <TableCell
@@ -196,21 +205,23 @@ export default function JeopardyTable({
                         userSelect: 'none',
                         height: 64,
                         py: 1,
-                        backgroundColor: isAnswered
+                        backgroundColor: isAnsweredCorrectly
                           ? '#388e3c'
-                          : isAuctioned
-                            ? 'rgba(255, 193, 7, 0.15)'
-                            : 'inherit',
-                        color: isAnswered ? '#fff' : 'inherit',
+                          : isAnsweredFailed
+                            ? '#c62828'
+                            : isAuctioned
+                              ? 'rgba(255, 193, 7, 0.15)'
+                              : 'inherit',
+                        color: isClosed ? '#fff' : 'inherit',
                         // Subtle dashed border hint for empty admin cells
                         ...(isAdmin &&
                           hasNoQuestion &&
-                          !isAnswered && {
+                          !isClosed && {
                             color: 'text.disabled',
                           }),
                       }}
                       onClick={() => {
-                        if (isAnswered) return;
+                        if (isClosed) return;
                         if (!isAdmin && hasNoQuestion) return;
                         const dialogData: QuestionDialogData = cellQuestion ?? {
                           category: cat.title,
@@ -221,7 +232,7 @@ export default function JeopardyTable({
                         openDialog(dialogData, catIdx, price);
                       }}
                     >
-                      {isAdmin && hasNoQuestion && !isAnswered ? (
+                      {isAdmin && hasNoQuestion && !isClosed ? (
                         <Box
                           component="span"
                           sx={{
@@ -272,6 +283,7 @@ export default function JeopardyTable({
         isOpen={isDialogOpen}
         onClose={onDialogClose}
         onAnswerReveal={onAnswerReveal}
+        onMarkAuctioned={onMarkAuctioned}
         onQuestionSave={isAdmin ? (questionSaverRef.current ?? undefined) : undefined}
         onLiveEdit={isAdmin ? (questionLiveEditRef.current ?? undefined) : undefined}
         disableBackdropClose

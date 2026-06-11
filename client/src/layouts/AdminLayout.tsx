@@ -12,10 +12,12 @@ import {
   OPEN_QUESTION_EVENT,
   CLOSE_QUESTION_EVENT,
   REVEAL_ANSWER_EVENT,
+  MARK_AUCTIONED_EVENT,
   PLAYERS_UPDATE_EVENT,
   UPDATE_QUESTION_EVENT,
   SYNC_CATEGORIES_EVENT,
   type RevealAnswerPayload,
+  type MarkAuctionedPayload,
   type PlayersUpdatePayload,
   type UpdateQuestionPayload,
 } from '../lib/websocket/messages';
@@ -72,8 +74,15 @@ export default function AdminLayout({ state, dispatch }: AdminLayoutProps) {
   }, [send]);
 
   const handleAnswerReveal = useCallback(
+    (questionKey: string, outcome: 'correct' | 'failed') => {
+      send<RevealAnswerPayload>(REVEAL_ANSWER_EVENT, { questionKey, outcome });
+    },
+    [send],
+  );
+
+  const handleMarkAuctioned = useCallback(
     (questionKey: string) => {
-      send<RevealAnswerPayload>(REVEAL_ANSWER_EVENT, { questionKey });
+      send<MarkAuctionedPayload>(MARK_AUCTIONED_EVENT, { questionKey });
     },
     [send],
   );
@@ -111,6 +120,7 @@ export default function AdminLayout({ state, dispatch }: AdminLayoutProps) {
         onQuestionOpen={handleQuestionOpen}
         onQuestionClose={handleQuestionClose}
         onAnswerReveal={handleAnswerReveal}
+        onMarkAuctioned={handleMarkAuctioned}
         onQuestionLiveEdit={handleQuestionLiveEdit}
       />
       <PlayerManagementForm state={state} dispatch={dispatch} actions={actions} />

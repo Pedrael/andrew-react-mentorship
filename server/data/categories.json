@@ -13,7 +13,8 @@
           "price": 200,
           "question": "Test 123",
           "answer": "asdasdad",
-          "isAnswered": false
+          "isAnswered": true,
+          "answeredCorrectly": false
         },
         {
           "price": 300,
@@ -52,7 +53,43 @@
         },
         {
           "price": 300,
+          "question": "Question 1",
+          "answer": "Answer 1",
+          "isAnswered": true,
+          "answeredCorrectly": false
+        },
+        {
+          "price": 400,
           "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 500,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        }
+      ]
+    },
+    {
+      "title": "Category 3",
+      "questions": [
+        {
+          "price": 100,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 200,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 300,
+          "question": "asdsada",
           "answer": "",
           "isAnswered": false
         },
@@ -71,7 +108,7 @@
       ]
     },
     {
-      "title": "Category 3",
+      "title": "Test",
       "questions": [
         {
           "price": 100,

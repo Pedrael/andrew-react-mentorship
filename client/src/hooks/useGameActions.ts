@@ -19,6 +19,7 @@ export type GameActions = {
     data: { question: string; answer: string; image?: string },
   ) => Promise<void>;
   markQuestionAnswered: (categoryTitle: string, price: number) => Promise<void>;
+  markQuestionFailed: (categoryTitle: string, price: number) => Promise<void>;
 };
 
 export function useGameActions(
@@ -103,9 +104,23 @@ export function useGameActions(
         if (categoryIndex === -1) return;
         await ApiService.patchCategoryQuestion(categoryIndex, price, {
           isAnswered: true,
+          answeredCorrectly: true,
         });
         dispatch({
           type: 'markQuestionAnswered',
+          payload: buildQuestionKey(categoryTitle, price),
+        });
+      },
+
+      markQuestionFailed: async (categoryTitle, price) => {
+        const categoryIndex = findCategoryIndex(categoryTitle);
+        if (categoryIndex === -1) return;
+        await ApiService.patchCategoryQuestion(categoryIndex, price, {
+          isAnswered: true,
+          answeredCorrectly: false,
+        });
+        dispatch({
+          type: 'markQuestionFailed',
           payload: buildQuestionKey(categoryTitle, price),
         });
       },

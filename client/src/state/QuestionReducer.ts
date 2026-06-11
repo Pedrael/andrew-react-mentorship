@@ -4,6 +4,7 @@ export type Question = {
   answer: string;
   image?: string;
   isAnswered?: boolean;
+  answeredCorrectly?: boolean;
 };
 
 export type Category = {
@@ -14,6 +15,7 @@ export type Category = {
 export type QuestionState = {
   categories: Category[];
   answeredQuestionKeys: Set<string>;
+  failedQuestionKeys: Set<string>;
   auctionedQuestionKeys: Set<string>;
   revealedQuestionKey: string | null;
 };
@@ -31,6 +33,7 @@ export type QuestionAction =
     }
   | { type: 'syncCategories'; payload: Category[] }
   | { type: 'markQuestionAnswered'; payload: string }
+  | { type: 'markQuestionFailed'; payload: string }
   | { type: 'markQuestionAuctioned'; payload: string }
   | { type: 'revealQuestionAnswer'; payload: string }
   | { type: 'clearRevealedQuestionAnswer' };
@@ -42,8 +45,28 @@ export function loadInitialCategories(): Category[] {
   return [];
 }
 
-export function loadInitialAnsweredKeys(_categories: Category[]): Set<string> {
-  return new Set<string>();
+export function loadInitialAnsweredKeys(categories: Category[]): Set<string> {
+  const keys = new Set<string>();
+  for (const category of categories) {
+    for (const question of category.questions) {
+      if (!question.isAnswered) continue;
+      if (question.answeredCorrectly === false) continue;
+      keys.add(buildQuestionKey(category.title, question.price));
+    }
+  }
+  return keys;
+}
+
+export function loadInitialFailedKeys(categories: Category[]): Set<string> {
+  const keys = new Set<string>();
+  for (const category of categories) {
+    for (const question of category.questions) {
+      if (question.isAnswered && question.answeredCorrectly === false) {
+        keys.add(buildQuestionKey(category.title, question.price));
+      }
+    }
+  }
+  return keys;
 }
 
 const questionActions = {
@@ -106,12 +129,32 @@ const questionActions = {
     const answeredQuestionKeys = alreadyAnswered
       ? state.answeredQuestionKeys
       : new Set(state.answeredQuestionKeys).add(questionKey);
+    let failedQuestionKeys = state.failedQuestionKeys;
+    if (state.failedQuestionKeys.has(questionKey)) {
+      failedQuestionKeys = new Set(state.failedQuestionKeys);
+      failedQuestionKeys.delete(questionKey);
+    }
     let auctionedQuestionKeys = state.auctionedQuestionKeys;
     if (wasAuctioned) {
       auctionedQuestionKeys = new Set(state.auctionedQuestionKeys);
       auctionedQuestionKeys.delete(questionKey);
     }
-    return { ...state, answeredQuestionKeys, auctionedQuestionKeys };
+    return { ...state, answeredQuestionKeys, failedQuestionKeys, auctionedQuestionKeys };
+  },
+  markQuestionFailed: (state: QuestionState, questionKey: string): QuestionState => {
+    if (state.failedQuestionKeys.has(questionKey)) return state;
+    const failedQuestionKeys = new Set(state.failedQuestionKeys).add(questionKey);
+    let answeredQuestionKeys = state.answeredQuestionKeys;
+    if (state.answeredQuestionKeys.has(questionKey)) {
+      answeredQuestionKeys = new Set(state.answeredQuestionKeys);
+      answeredQuestionKeys.delete(questionKey);
+    }
+    let auctionedQuestionKeys = state.auctionedQuestionKeys;
+    if (state.auctionedQuestionKeys.has(questionKey)) {
+      auctionedQuestionKeys = new Set(state.auctionedQuestionKeys);
+      auctionedQuestionKeys.delete(questionKey);
+    }
+    return { ...state, answeredQuestionKeys, failedQuestionKeys, auctionedQuestionKeys };
   },
   markQuestionAuctioned: (state: QuestionState, questionKey: string): QuestionState => {
     if (state.auctionedQuestionKeys.has(questionKey)) return state;
@@ -153,6 +196,8 @@ export default function questionReducer(
       return questionActions.syncCategories(state, action.payload);
     case 'markQuestionAnswered':
       return questionActions.markQuestionAnswered(state, action.payload);
+    case 'markQuestionFailed':
+      return questionActions.markQuestionFailed(state, action.payload);
     case 'markQuestionAuctioned':
       return questionActions.markQuestionAuctioned(state, action.payload);
     case 'revealQuestionAnswer':

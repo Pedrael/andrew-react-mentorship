@@ -36,6 +36,7 @@ export type PatchQuestionPayload = {
   answer?: string;
   image?: string | null;
   isAnswered?: boolean;
+  answeredCorrectly?: boolean;
 };
 
 export type HealthResponse = {
