@@ -1,7 +1,10 @@
-import { useCallback, useState, type Dispatch } from 'react';
+import { useCallback, useEffect, useState, type Dispatch } from 'react';
+import { useNavigate } from 'react-router-dom';
 import JeopardyTable from '../components/jeopardy-table/JeopardyTable';
 import QuestionDialog from '../components/question-dialog/QuestionDialog';
 import type { QuestionDialogData } from '../components/question-dialog/QuestionDialog';
+import { useBootstrap } from '../hooks/useBootstrap';
+import { logout } from '../services/auth';
 import { useWebSocket } from '../lib/websocket/useWebSocket';
 import {
   OPEN_QUESTION_EVENT,
@@ -28,9 +31,18 @@ type PlayerLayoutProps = {
 };
 
 export default function PlayerLayout({ state, dispatch }: PlayerLayoutProps) {
+  const navigate = useNavigate();
+  const bootstrap = useBootstrap(dispatch, true);
   const [openedQuestion, setOpenedQuestion] = useState<QuestionDialogData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
+
+  useEffect(() => {
+    if (bootstrap.status === 'unauthorized') {
+      logout();
+      navigate('/login', { replace: true });
+    }
+  }, [bootstrap.status, navigate]);
 
   const closeDialog = useCallback(() => {
     setIsDialogOpen(false);

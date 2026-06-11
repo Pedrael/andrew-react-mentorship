@@ -11,7 +11,7 @@ type ApiRequestOptions = {
   headers?: Record<string, string>;
   skipAuth?: boolean;
 };
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 function buildUrl(path: string): string {
   const normalizedBase = API_BASE_URL.replace(/\/$/, '');
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;

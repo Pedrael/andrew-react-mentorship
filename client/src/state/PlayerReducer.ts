@@ -19,21 +19,8 @@ export type PlayerAction =
   | { type: 'selectNextPlayer' }
   | { type: 'syncPlayers'; payload: Array<{ id: string; name: string; score: number }> };
 
-const PLAYERS_STORAGE_KEY = 'jeopardy-players';
-
-const defaultPlayers: Player[] = [
-  { id: 'player-1', name: 'Player 1', score: 0, isSelected: true },
-  { id: 'player-2', name: 'Player 2', score: 0, isSelected: false },
-];
-
 export function loadInitialPlayers(): Player[] {
-  try {
-    const stored = localStorage.getItem(PLAYERS_STORAGE_KEY);
-    if (stored) return JSON.parse(stored) as Player[];
-  } catch {
-    // corrupted storage — fall back to defaults
-  }
-  return defaultPlayers;
+  return [];
 }
 
 const playerActions = {

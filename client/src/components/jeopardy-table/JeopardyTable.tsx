@@ -14,10 +14,12 @@ import QuestionDialog from '../question-dialog/QuestionDialog';
 import type { QuestionDialogData } from '../question-dialog/QuestionDialog';
 import { buildQuestionKey } from '../../state/QuestionReducer';
 import type { GameAction, GameState } from '../../state/RootReducer';
+import type { GameActions } from '../../hooks/useGameActions';
 
 type JeopardyTableProps = {
   state: GameState;
   dispatch: Dispatch<GameAction>;
+  actions?: GameActions;
   isAdmin: boolean;
   onQuestionOpen?: (question: QuestionDialogData) => void;
   onQuestionClose?: () => void;
@@ -28,17 +30,14 @@ type JeopardyTableProps = {
 export default function JeopardyTable({
   state,
   dispatch,
+  actions,
   isAdmin = false,
   onQuestionOpen,
   onQuestionClose,
   onAnswerReveal,
   onQuestionLiveEdit,
 }: JeopardyTableProps) {
-  const {
-    categories: categoriesData,
-    answeredQuestionKeys,
-    auctionedQuestionKeys,
-  } = state;
+  const { categories: categoriesData, answeredQuestionKeys, auctionedQuestionKeys } = state;
 
   const [selectedQuestion, setSelectedQuestion] = React.useState<QuestionDialogData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
@@ -84,13 +83,14 @@ export default function JeopardyTable({
     return map;
   }, [categoriesData]);
 
-  const openDialog = (
-    cellData: QuestionDialogData,
-    categoryIndex: number,
-    price: number,
-  ) => {
-    questionSaverRef.current = (data) =>
-      dispatch({ type: 'updateQuestion', payload: { categoryIndex, price, data } });
+  const openDialog = (cellData: QuestionDialogData, categoryIndex: number, price: number) => {
+    questionSaverRef.current = (data) => {
+      if (actions) {
+        void actions.updateQuestion(categoryIndex, price, data);
+      } else {
+        dispatch({ type: 'updateQuestion', payload: { categoryIndex, price, data } });
+      }
+    };
     questionLiveEditRef.current = (data) => onQuestionLiveEdit?.({ ...cellData, ...data });
     setSelectedQuestion(cellData);
     setIsDialogOpen(true);
@@ -145,12 +145,18 @@ export default function JeopardyTable({
                   {isAdmin ? (
                     <InputBase
                       value={cat.title}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const newTitle = e.target.value;
                         dispatch({
                           type: 'updateCategoryTitle',
-                          payload: { index: catIdx, newTitle: e.target.value },
-                        })
-                      }
+                          payload: { index: catIdx, newTitle },
+                        });
+                      }}
+                      onBlur={(e) => {
+                        if (actions) {
+                          void actions.updateCategoryTitle(catIdx, e.target.value);
+                        }
+                      }}
                       inputProps={{ 'aria-label': 'category name' }}
                       sx={{
                         fontWeight: 700,
@@ -197,9 +203,11 @@ export default function JeopardyTable({
                             : 'inherit',
                         color: isAnswered ? '#fff' : 'inherit',
                         // Subtle dashed border hint for empty admin cells
-                        ...(isAdmin && hasNoQuestion && !isAnswered && {
-                          color: 'text.disabled',
-                        }),
+                        ...(isAdmin &&
+                          hasNoQuestion &&
+                          !isAnswered && {
+                            color: 'text.disabled',
+                          }),
                       }}
                       onClick={() => {
                         if (isAnswered) return;
@@ -226,7 +234,7 @@ export default function JeopardyTable({
                           +
                         </Box>
                       ) : (
-                        cellQuestion?.price ?? ''
+                        (cellQuestion?.price ?? '')
                       )}
                     </TableCell>
                   );
@@ -241,7 +249,13 @@ export default function JeopardyTable({
         <Box sx={{ mt: 1 }}>
           <Button
             variant="outlined"
-            onClick={() => dispatch({ type: 'addCategory' })}
+            onClick={() => {
+              if (actions) {
+                void actions.addCategory();
+              } else {
+                dispatch({ type: 'addCategory' });
+              }
+            }}
             sx={{ borderStyle: 'dashed' }}
           >
             + Add category
@@ -252,6 +266,7 @@ export default function JeopardyTable({
       <QuestionDialog
         state={state}
         dispatch={dispatch}
+        actions={actions}
         question={selectedQuestion}
         isAdmin={isAdmin}
         isOpen={isDialogOpen}

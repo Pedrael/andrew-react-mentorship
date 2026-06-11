@@ -1,49 +1,40 @@
-import { useEffect, useReducer } from 'react';
+import { useReducer, useState, type ReactNode } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import AdminLayout from './layouts/AdminLayout';
 import PlayerLayout from './layouts/PlayerLayout';
 import AuthorizationForm from './components/authorization-form/AuthorizationForm';
 import { buildInitialState, rootReducer } from './state/RootReducer';
+import { isAuthenticated } from './services/authStorage';
 
-const CATEGORIES_STORAGE_KEY = 'jeopardy-categories';
-const PLAYERS_STORAGE_KEY = 'jeopardy-players';
-const ANSWERED_STORAGE_KEY = 'jeopardy-answered';
+function RequireAuth({ children }: { children: ReactNode }) {
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+}
 
 function App() {
   const [state, dispatch] = useReducer(rootReducer, undefined, buildInitialState);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(state.categories));
-    } catch {
-      // storage quota exceeded — ignore
-    }
-  }, [state.categories]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PLAYERS_STORAGE_KEY, JSON.stringify(state.players));
-    } catch {
-      // storage quota exceeded — ignore
-    }
-  }, [state.players]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        ANSWERED_STORAGE_KEY,
-        JSON.stringify([...state.answeredQuestionKeys]),
-      );
-    } catch {
-      // storage quota exceeded — ignore
-    }
-  }, [state.answeredQuestionKeys]);
-
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/admin" replace />} />
-      <Route path="/admin" element={<AdminLayout state={state} dispatch={dispatch} />} />
-      <Route path="/player" element={<PlayerLayout state={state} dispatch={dispatch} />} />
+      <Route
+        path="/admin"
+        element={
+          <RequireAuth>
+            <AdminLayout state={state} dispatch={dispatch} />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/player"
+        element={
+          <RequireAuth>
+            <PlayerLayout state={state} dispatch={dispatch} />
+          </RequireAuth>
+        }
+      />
       <Route path="/login" element={<LoginPage />} />
     </Routes>
   );
@@ -51,9 +42,20 @@ function App() {
 
 function LoginPage() {
   const navigate = useNavigate();
+  const [authed, setAuthed] = useState(isAuthenticated());
+
+  if (authed) {
+    return <Navigate to="/admin" replace />;
+  }
+
   return (
     <section style={{ padding: 32 }}>
-      <AuthorizationForm onSuccess={() => navigate('/admin')} />
+      <AuthorizationForm
+        onSuccess={() => {
+          setAuthed(true);
+          navigate('/admin', { replace: true });
+        }}
+      />
     </section>
   );
 }

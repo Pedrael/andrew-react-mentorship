@@ -1,3 +1,10 @@
 node_modules
 dist
 *.log
+
+# Env
+.env
+.env.local
+
+# Runtime persistence (players, categories, users w/ password hashes)
+data/*.json

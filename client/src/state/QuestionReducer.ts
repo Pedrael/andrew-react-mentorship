@@ -1,5 +1,3 @@
-import questionsJson from '../data/questions.json';
-
 export type Question = {
   price: number;
   question: string;
@@ -11,10 +9,6 @@ export type Question = {
 export type Category = {
   title: string;
   questions: Question[];
-};
-
-type QuestionsJsonShape = {
-  categories: Category[];
 };
 
 export type QuestionState = {
@@ -41,36 +35,15 @@ export type QuestionAction =
   | { type: 'revealQuestionAnswer'; payload: string }
   | { type: 'clearRevealedQuestionAnswer' };
 
-const CATEGORIES_STORAGE_KEY = 'jeopardy-categories';
-const ANSWERED_STORAGE_KEY = 'jeopardy-answered';
-
 export const buildQuestionKey = (categoryTitle: string, price: number) =>
   `${categoryTitle}::${price}`;
 
 export function loadInitialCategories(): Category[] {
-  try {
-    const stored = localStorage.getItem(CATEGORIES_STORAGE_KEY);
-    if (stored) return JSON.parse(stored) as Category[];
-  } catch {
-    // corrupted storage — fall back to the JSON file
-  }
-  return (questionsJson as QuestionsJsonShape | undefined)?.categories ?? [];
+  return [];
 }
 
-export function loadInitialAnsweredKeys(categories: Category[]): Set<string> {
-  try {
-    const stored = localStorage.getItem(ANSWERED_STORAGE_KEY);
-    if (stored) return new Set<string>(JSON.parse(stored) as string[]);
-  } catch {
-    // corrupted storage — derive from categories as fallback
-  }
-  const keys = new Set<string>();
-  for (const category of categories) {
-    for (const q of category.questions) {
-      if (q.isAnswered) keys.add(buildQuestionKey(category.title, q.price));
-    }
-  }
-  return keys;
+export function loadInitialAnsweredKeys(_categories: Category[]): Set<string> {
+  return new Set<string>();
 }
 
 const questionActions = {

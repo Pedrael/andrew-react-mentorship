@@ -1,6 +1,9 @@
 import { useCallback, useEffect, type Dispatch } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import JeopardyTable from '../components/jeopardy-table/JeopardyTable';
 import PlayerManagementForm from '../components/player-management-form/PlayerManagementForm';
 import type { QuestionDialogData } from '../components/question-dialog/QuestionDialog';
@@ -17,6 +20,9 @@ import {
   type UpdateQuestionPayload,
 } from '../lib/websocket/messages';
 import type { Category, GameAction, GameState } from '../state/RootReducer';
+import { useBootstrap } from '../hooks/useBootstrap';
+import { useGameActions } from '../hooks/useGameActions';
+import { logout } from '../services/auth';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080';
 
@@ -26,8 +32,18 @@ type AdminLayoutProps = {
 };
 
 export default function AdminLayout({ state, dispatch }: AdminLayoutProps) {
+  const navigate = useNavigate();
   const { players, categories } = state;
   const { send, status } = useWebSocket({ url: WS_URL, role: 'admin' });
+  const bootstrap = useBootstrap(dispatch, true);
+  const actions = useGameActions(state, dispatch);
+
+  useEffect(() => {
+    if (bootstrap.status === 'unauthorized') {
+      logout();
+      navigate('/login', { replace: true });
+    }
+  }, [bootstrap.status, navigate]);
 
   useEffect(() => {
     if (status !== 'open') return;
@@ -69,31 +85,55 @@ export default function AdminLayout({ state, dispatch }: AdminLayoutProps) {
     [send],
   );
 
+  if (bootstrap.status === 'loading' || bootstrap.status === 'idle') {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (bootstrap.status === 'error') {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Alert severity="error">Failed to load game state: {bootstrap.error}</Alert>
+      </Box>
+    );
+  }
+
   return (
     <section style={{ padding: 16 }}>
       <JeopardyTable
         state={state}
         dispatch={dispatch}
+        actions={actions}
         isAdmin={true}
         onQuestionOpen={handleQuestionOpen}
         onQuestionClose={handleQuestionClose}
         onAnswerReveal={handleAnswerReveal}
         onQuestionLiveEdit={handleQuestionLiveEdit}
       />
-      <PlayerManagementForm state={state} dispatch={dispatch} />
-      <Box sx={{ mt: 4, pt: 2, borderTop: '1px dashed', borderColor: 'divider' }}>
+      <PlayerManagementForm state={state} dispatch={dispatch} actions={actions} />
+      <Box sx={{ mt: 4, pt: 2, borderTop: '1px dashed', borderColor: 'divider', display: 'flex', gap: 1 }}>
         <Button
           variant="outlined"
-          color="error"
+          color="warning"
           size="small"
           onClick={() => {
-            localStorage.removeItem('jeopardy-players');
-            localStorage.removeItem('jeopardy-categories');
-            localStorage.removeItem('jeopardy-answered');
-            location.reload();
+            void actions.resetScores();
           }}
         >
-          Reset game (clear storage)
+          Reset scores
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={() => {
+            logout();
+            navigate('/login', { replace: true });
+          }}
+        >
+          Sign out
         </Button>
       </Box>
     </section>

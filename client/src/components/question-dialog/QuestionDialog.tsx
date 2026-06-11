@@ -15,6 +15,7 @@ import {
   type GameState,
   type Player,
 } from '../../state/RootReducer';
+import type { GameActions } from '../../hooks/useGameActions';
 
 export type QuestionDialogData = {
   category: string;
@@ -27,6 +28,7 @@ export type QuestionDialogData = {
 type QuestionDialogProps = {
   state: GameState;
   dispatch: Dispatch<GameAction>;
+  actions?: GameActions;
   question: QuestionDialogData | null;
   isAdmin: boolean;
   isOpen: boolean;
@@ -41,6 +43,7 @@ type QuestionDialogProps = {
 export default function QuestionDialog({
   state,
   dispatch,
+  actions,
   question,
   isAdmin = false,
   isOpen,
@@ -88,36 +91,44 @@ export default function QuestionDialog({
     closeDialog();
   };
 
-  // Stage 1 — selected player answered correctly
-  const handleCorrectAnswerStage1 = () => {
-    if (!selectedPlayer || !question || !questionKey) return;
+  const finalizeCorrectAnswer = async (player: Player) => {
+    if (!question || !questionKey) return;
     dispatch({ type: 'revealQuestionAnswer', payload: questionKey });
-    dispatch({ type: 'addScore', payload: { playerId: selectedPlayer.id, points: scoreDelta } });
-    dispatch({ type: 'markQuestionAnswered', payload: questionKey });
+    if (actions) {
+      await actions.addScore(player.id, scoreDelta);
+      await actions.markQuestionAnswered(question.category, question.price);
+    } else {
+      dispatch({ type: 'addScore', payload: { playerId: player.id, points: scoreDelta } });
+      dispatch({ type: 'markQuestionAnswered', payload: questionKey });
+    }
     dispatch({ type: 'selectNextPlayer' });
     onAnswerReveal?.(questionKey);
     setWinner(selectWinnerIfGameEnded(state));
+  };
+
+  // Stage 1 — selected player answered correctly
+  const handleCorrectAnswerStage1 = () => {
+    if (!selectedPlayer) return;
+    void finalizeCorrectAnswer(selectedPlayer);
   };
 
   // Stage 1 — selected player answered wrong
   const handleWrongAnswer = () => {
     if (!selectedPlayer || !question) return;
-    dispatch({
-      type: 'subtractScore',
-      payload: { playerId: selectedPlayer.id, points: wrongAnswerPenalty },
-    });
+    if (actions) {
+      void actions.subtractScore(selectedPlayer.id, wrongAnswerPenalty);
+    } else {
+      dispatch({
+        type: 'subtractScore',
+        payload: { playerId: selectedPlayer.id, points: wrongAnswerPenalty },
+      });
+    }
     setWrongPlayerId(selectedPlayer.id);
   };
 
   // Stage 2 — one of the remaining players answered correctly
   const handleCorrectAnswerStage2 = (player: Player) => {
-    if (!question || !questionKey) return;
-    dispatch({ type: 'revealQuestionAnswer', payload: questionKey });
-    dispatch({ type: 'addScore', payload: { playerId: player.id, points: scoreDelta } });
-    dispatch({ type: 'markQuestionAnswered', payload: questionKey });
-    dispatch({ type: 'selectNextPlayer' });
-    onAnswerReveal?.(questionKey);
-    setWinner(selectWinnerIfGameEnded(state));
+    void finalizeCorrectAnswer(player);
   };
 
   // Sync editable fields when a new question is opened

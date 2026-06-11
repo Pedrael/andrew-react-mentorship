@@ -10,17 +10,24 @@ import { useState, type ChangeEvent, type Dispatch } from 'react';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
-import type { GameAction, GameState, Player } from '../../state/RootReducer';
+import type { GameAction, GameState } from '../../state/RootReducer';
+import type { GameActions } from '../../hooks/useGameActions';
 
 type PlayerManagementFormProps = {
   state: GameState;
   dispatch: Dispatch<GameAction>;
+  actions: GameActions;
 };
 
-export default function PlayerManagementForm({ state, dispatch }: PlayerManagementFormProps) {
+export default function PlayerManagementForm({
+  state,
+  dispatch,
+  actions,
+}: PlayerManagementFormProps) {
   const { players } = state;
 
   const [newPlayerName, setNewPlayerName] = useState<string>('');
+  const [pending, setPending] = useState(false);
 
   const selectedPlayerId = players.find((player) => player.isSelected)?.id ?? '';
 
@@ -28,18 +35,19 @@ export default function PlayerManagementForm({ state, dispatch }: PlayerManageme
     dispatch({ type: 'selectPlayer', payload: value });
   };
 
-  const handleAddPlayer = () => {
-    const newPlayer: Player = {
-      id: crypto.randomUUID(),
-      name: newPlayerName,
-      score: 0,
-      isSelected: false,
-    };
-    dispatch({ type: 'addPlayer', payload: newPlayer });
+  const handleAddPlayer = async () => {
+    if (!newPlayerName.trim() || pending) return;
+    setPending(true);
+    try {
+      await actions.addPlayer(newPlayerName);
+      setNewPlayerName('');
+    } finally {
+      setPending(false);
+    }
   };
 
   const handleDeletePlayer = (playerId: string) => {
-    dispatch({ type: 'deletePlayer', payload: playerId });
+    void actions.deletePlayer(playerId);
   };
 
   return (
@@ -84,9 +92,15 @@ export default function PlayerManagementForm({ state, dispatch }: PlayerManageme
             <TextField
               id="playerName"
               type="text"
+              value={newPlayerName}
               onChange={(_event) => setNewPlayerName(_event.target.value)}
+              disabled={pending}
             />
-            <Button variant="contained" onClick={() => handleAddPlayer()}>
+            <Button
+              variant="contained"
+              onClick={() => void handleAddPlayer()}
+              disabled={pending || !newPlayerName.trim()}
+            >
               Add
             </Button>
           </Box>

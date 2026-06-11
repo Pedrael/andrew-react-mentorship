@@ -1,3 +1,109 @@
 {
-  "categories": []
+  "categories": [
+    {
+      "title": "Category 1",
+      "questions": [
+        {
+          "price": 100,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 200,
+          "question": "Test 123",
+          "answer": "asdasdad",
+          "isAnswered": false
+        },
+        {
+          "price": 300,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 400,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 500,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        }
+      ]
+    },
+    {
+      "title": "Category 2",
+      "questions": [
+        {
+          "price": 100,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 200,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 300,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 400,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 500,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        }
+      ]
+    },
+    {
+      "title": "Category 3",
+      "questions": [
+        {
+          "price": 100,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 200,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 300,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 400,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 500,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        }
+      ]
+    }
+  ]
 }
