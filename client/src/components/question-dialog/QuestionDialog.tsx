@@ -8,6 +8,7 @@ import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useRef, useState, type Dispatch } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { buildQuestionKey } from '../../state/QuestionReducer';
 import {
   selectWinnerIfGameEnded,
@@ -62,10 +63,16 @@ export default function QuestionDialog({
   const [selectorPlayerId, setSelectorPlayerId] = useState<string | null>(null);
   const [bids, setBids] = useState<Record<string, number>>({});
   const [auctionWrongIds, setAuctionWrongIds] = useState<Set<string>>(() => new Set());
-  // Local editable state — initialised from props, saved to context on close
-  const [editQuestion, setEditQuestion] = useState('');
-  const [editAnswer, setEditAnswer] = useState('');
-  const [editImage, setEditImage] = useState('');
+  // Local editable fields — initialised from props, saved to context on close
+  const { control, reset, getValues, watch } = useForm<{
+    question: string;
+    answer: string;
+    image: string;
+  }>({
+    defaultValues: { question: '', answer: '', image: '' },
+  });
+  // Watched image value drives the live preview as the admin types
+  const editImage = watch('image');
 
   const selectedPlayer = players.find((p) => p.isSelected);
   const scoreDelta = question?.price ?? 0;
@@ -93,10 +100,11 @@ export default function QuestionDialog({
 
   const closeDialog = () => {
     if (isAdmin && onQuestionSave) {
+      const { question: q, answer: a, image: img } = getValues();
       onQuestionSave({
-        question: editQuestion,
-        answer: editAnswer,
-        image: editImage.trim() || undefined,
+        question: q,
+        answer: a,
+        image: img.trim() || undefined,
       });
     }
     dispatch({ type: 'clearRevealedQuestionAnswer' });
@@ -200,10 +208,12 @@ export default function QuestionDialog({
 
   // Sync editable fields when a new question is opened
   useEffect(() => {
-    setEditQuestion(question?.question ?? '');
-    setEditAnswer(question?.answer ?? '');
-    setEditImage(question?.image ?? '');
-  }, [question]);
+    reset({
+      question: question?.question ?? '',
+      answer: question?.answer ?? '',
+      image: question?.image ?? '',
+    });
+  }, [question, reset]);
 
   // Keep a stable ref so the broadcast effect doesn't need onLiveEdit as a dep
   const onLiveEditRef = useRef(onLiveEdit);
@@ -214,12 +224,15 @@ export default function QuestionDialog({
   // Broadcast every field edit to the player page
   useEffect(() => {
     if (!isAdmin || !question) return;
-    onLiveEditRef.current?.({
-      question: editQuestion,
-      answer: editAnswer,
-      image: editImage.trim() || undefined,
+    const subscription = watch((values) => {
+      onLiveEditRef.current?.({
+        question: values.question ?? '',
+        answer: values.answer ?? '',
+        image: values.image?.trim() || undefined,
+      });
     });
-  }, [editQuestion, editAnswer, editImage, isAdmin, question]);
+    return () => subscription.unsubscribe();
+  }, [watch, isAdmin, question]);
 
   useEffect(() => {
     if (!isOpen || !questionKey) {
@@ -253,13 +266,12 @@ export default function QuestionDialog({
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
         {/* Question text */}
         {isAdmin ? (
-          <TextField
-            label="Question"
-            multiline
-            minRows={2}
-            fullWidth
-            value={editQuestion}
-            onChange={(e) => setEditQuestion(e.target.value)}
+          <Controller
+            name="question"
+            control={control}
+            render={({ field }) => (
+              <TextField {...field} label="Question" multiline minRows={2} fullWidth />
+            )}
           />
         ) : (
           <Typography variant="body1">{question?.question}</Typography>
@@ -267,11 +279,12 @@ export default function QuestionDialog({
 
         {/* Image URL */}
         {isAdmin && (
-          <TextField
-            label="Image URL (optional)"
-            fullWidth
-            value={editImage}
-            onChange={(e) => setEditImage(e.target.value)}
+          <Controller
+            name="image"
+            control={control}
+            render={({ field }) => (
+              <TextField {...field} label="Image URL (optional)" fullWidth />
+            )}
           />
         )}
 
@@ -287,11 +300,10 @@ export default function QuestionDialog({
 
         {/* Answer */}
         {isAdmin ? (
-          <TextField
-            label="Answer"
-            fullWidth
-            value={editAnswer}
-            onChange={(e) => setEditAnswer(e.target.value)}
+          <Controller
+            name="answer"
+            control={control}
+            render={({ field }) => <TextField {...field} label="Answer" fullWidth />}
           />
         ) : (
           (isRevealingAnswer || showAnswer) && (

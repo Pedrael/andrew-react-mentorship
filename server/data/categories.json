@@ -37,7 +37,7 @@
       ]
     },
     {
-      "title": "Category 2",
+      "title": "asd",
       "questions": [
         {
           "price": 100,
@@ -114,6 +114,41 @@
           "price": 100,
           "question": "",
           "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 200,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 300,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 400,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 500,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        }
+      ]
+    },
+    {
+      "title": "Category 5",
+      "questions": [
+        {
+          "price": 100,
+          "question": "",
+          "answer": "asdadas",
           "isAnswered": false
         },
         {
