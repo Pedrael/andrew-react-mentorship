@@ -5,14 +5,14 @@ import FormLabel from '@mui/material/FormLabel';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import Typography from '@mui/material/Typography';
-import TextField from '@mui/material/TextField';
 import { type ChangeEvent, type Dispatch } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
 import type { GameAction, GameState } from '../../state/RootReducer';
 import type { GameActions } from '../../hooks/useGameActions';
+import ControllableTextField from '../controllable-text-field/ControllableTextField';
 
 type PlayerManagementFormProps = {
   state: GameState;
@@ -94,7 +94,7 @@ export default function PlayerManagementForm({
                 </IconButton>
               </Box>
             ))}
-            <Controller
+            <ControllableTextField
               name="playerName"
               control={control}
               rules={{
@@ -102,16 +102,9 @@ export default function PlayerManagementForm({
                 validate: (value) =>
                   value.trim().length > 0 || 'Player name is required',
               }}
-              render={({ field, fieldState }) => (
-                <TextField
-                  {...field}
-                  id="playerName"
-                  type="text"
-                  disabled={isSubmitting}
-                  error={Boolean(fieldState.error)}
-                  helperText={fieldState.error?.message}
-                />
-              )}
+              id="playerName"
+              type="text"
+              disabled={isSubmitting}
             />
             <Button type="submit" variant="contained" disabled={isSubmitting}>
               Add

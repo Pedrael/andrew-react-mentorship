@@ -8,7 +8,7 @@ import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import { login, type TokenResponse } from '../../services/auth';
 import type { ApiError } from '../../services/apiClient';
-import ControlableTextField from '../controlable-text-field/ControlableTextField';
+import ControllableTextField from '../controllable-text-field/ControllableTextField';
 
 type AuthorizationFormProps = {
   onSuccess?: (token: TokenResponse) => void;
@@ -56,7 +56,7 @@ export default function AuthorizationForm({
         </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <ControlableTextField
+          <ControllableTextField
             name="username"
             control={control}
             rules={{
@@ -73,7 +73,7 @@ export default function AuthorizationForm({
             placeholder="admin"
           />
 
-          <ControlableTextField
+          <ControllableTextField
             name="password"
             control={control}
             rules={{

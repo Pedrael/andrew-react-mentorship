@@ -8,8 +8,9 @@ import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useRef, useState, type Dispatch } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { buildQuestionKey } from '../../state/QuestionReducer';
+import ControllableTextField from '../controllable-text-field/ControllableTextField';
 import {
   selectWinnerIfGameEnded,
   type GameAction,
@@ -266,12 +267,13 @@ export default function QuestionDialog({
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
         {/* Question text */}
         {isAdmin ? (
-          <Controller
+          <ControllableTextField
             name="question"
             control={control}
-            render={({ field }) => (
-              <TextField {...field} label="Question" multiline minRows={2} fullWidth />
-            )}
+            label="Question"
+            multiline
+            minRows={2}
+            fullWidth
           />
         ) : (
           <Typography variant="body1">{question?.question}</Typography>
@@ -279,12 +281,11 @@ export default function QuestionDialog({
 
         {/* Image URL */}
         {isAdmin && (
-          <Controller
+          <ControllableTextField
             name="image"
             control={control}
-            render={({ field }) => (
-              <TextField {...field} label="Image URL (optional)" fullWidth />
-            )}
+            label="Image URL (optional)"
+            fullWidth
           />
         )}
 
@@ -300,11 +301,7 @@ export default function QuestionDialog({
 
         {/* Answer */}
         {isAdmin ? (
-          <Controller
-            name="answer"
-            control={control}
-            render={({ field }) => <TextField {...field} label="Answer" fullWidth />}
-          />
+          <ControllableTextField name="answer" control={control} label="Answer" fullWidth />
         ) : (
           (isRevealingAnswer || showAnswer) && (
             <Typography variant="subtitle2">Answer: {question?.answer}</Typography>
