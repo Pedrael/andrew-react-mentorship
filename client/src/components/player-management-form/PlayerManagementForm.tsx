@@ -5,18 +5,18 @@ import FormLabel from '@mui/material/FormLabel';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import Typography from '@mui/material/Typography';
-import { type ChangeEvent, type Dispatch } from 'react';
+import { type ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
-import type { GameAction, GameState } from '../../state/RootReducer';
 import type { GameActions } from '../../hooks/useGameActions';
 import ControllableTextField from '../controllable-text-field/ControllableTextField';
+import { useAppDispatch, useAppSelector } from '../../state/hooks';
+import { selectPlayers } from '../../state/selectors';
+import { selectPlayer } from '../../state/playerSlice';
 
 type PlayerManagementFormProps = {
-  state: GameState;
-  dispatch: Dispatch<GameAction>;
   actions: GameActions;
 };
 
@@ -24,12 +24,9 @@ type AddPlayerFormValues = {
   playerName: string;
 };
 
-export default function PlayerManagementForm({
-  state,
-  dispatch,
-  actions,
-}: PlayerManagementFormProps) {
-  const { players } = state;
+export default function PlayerManagementForm({ actions }: PlayerManagementFormProps) {
+  const dispatch = useAppDispatch();
+  const players = useAppSelector(selectPlayers);
 
   const {
     control,
@@ -43,7 +40,7 @@ export default function PlayerManagementForm({
   const selectedPlayerId = players.find((player) => player.isSelected)?.id ?? '';
 
   const handleChange = (_event: ChangeEvent<HTMLInputElement>, value: string) => {
-    dispatch({ type: 'selectPlayer', payload: value });
+    dispatch(selectPlayer(value));
   };
 
   const onAddPlayer = async ({ playerName }: AddPlayerFormValues) => {
@@ -99,8 +96,7 @@ export default function PlayerManagementForm({
               control={control}
               rules={{
                 required: 'Player name is required',
-                validate: (value) =>
-                  value.trim().length > 0 || 'Player name is required',
+                validate: (value) => value.trim().length > 0 || 'Player name is required',
               }}
               id="playerName"
               type="text"

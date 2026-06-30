@@ -1,9 +1,8 @@
-import { useReducer, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import AdminLayout from './layouts/AdminLayout';
 import PlayerLayout from './layouts/PlayerLayout';
 import AuthorizationForm from './components/authorization-form/AuthorizationForm';
-import { buildInitialState, rootReducer } from './state/RootReducer';
 import { isAuthenticated } from './services/authStorage';
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -14,8 +13,6 @@ function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 function App() {
-  const [state, dispatch] = useReducer(rootReducer, undefined, buildInitialState);
-
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/admin" replace />} />
@@ -23,7 +20,7 @@ function App() {
         path="/admin"
         element={
           <RequireAuth>
-            <AdminLayout state={state} dispatch={dispatch} />
+            <AdminLayout />
           </RequireAuth>
         }
       />
@@ -31,7 +28,7 @@ function App() {
         path="/player"
         element={
           <RequireAuth>
-            <PlayerLayout state={state} dispatch={dispatch} />
+            <PlayerLayout />
           </RequireAuth>
         }
       />

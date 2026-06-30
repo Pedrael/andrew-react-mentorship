@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type Dispatch } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -21,24 +21,21 @@ import {
   type PlayersUpdatePayload,
   type UpdateQuestionPayload,
 } from '../lib/websocket/messages';
-import type { Category, GameAction, GameState } from '../state/RootReducer';
 import { useBootstrap } from '../hooks/useBootstrap';
 import { useGameActions } from '../hooks/useGameActions';
 import { logout } from '../services/auth';
+import { useAppSelector } from '../state/hooks';
+import { selectPlayers, selectCategories } from '../state/selectors';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080';
 
-type AdminLayoutProps = {
-  state: GameState;
-  dispatch: Dispatch<GameAction>;
-};
-
-export default function AdminLayout({ state, dispatch }: AdminLayoutProps) {
+export default function AdminLayout() {
   const navigate = useNavigate();
-  const { players, categories } = state;
+  const players = useAppSelector(selectPlayers);
+  const categories = useAppSelector(selectCategories);
   const { send, status } = useWebSocket({ url: WS_URL, role: 'admin' });
-  const bootstrap = useBootstrap(dispatch, true);
-  const actions = useGameActions(state, dispatch);
+  const bootstrap = useBootstrap(true);
+  const actions = useGameActions();
 
   useEffect(() => {
     if (bootstrap.status === 'unauthorized') {
@@ -49,7 +46,7 @@ export default function AdminLayout({ state, dispatch }: AdminLayoutProps) {
 
   useEffect(() => {
     if (status !== 'open') return;
-    send<Category[]>(SYNC_CATEGORIES_EVENT, categories);
+    send(SYNC_CATEGORIES_EVENT, categories);
   }, [categories, status, send]);
 
   useEffect(() => {
@@ -113,8 +110,6 @@ export default function AdminLayout({ state, dispatch }: AdminLayoutProps) {
   return (
     <section style={{ padding: 16 }}>
       <JeopardyTable
-        state={state}
-        dispatch={dispatch}
         actions={actions}
         isAdmin={true}
         onQuestionOpen={handleQuestionOpen}
@@ -123,8 +118,17 @@ export default function AdminLayout({ state, dispatch }: AdminLayoutProps) {
         onMarkAuctioned={handleMarkAuctioned}
         onQuestionLiveEdit={handleQuestionLiveEdit}
       />
-      <PlayerManagementForm state={state} dispatch={dispatch} actions={actions} />
-      <Box sx={{ mt: 4, pt: 2, borderTop: '1px dashed', borderColor: 'divider', display: 'flex', gap: 1 }}>
+      <PlayerManagementForm actions={actions} />
+      <Box
+        sx={{
+          mt: 4,
+          pt: 2,
+          borderTop: '1px dashed',
+          borderColor: 'divider',
+          display: 'flex',
+          gap: 1,
+        }}
+      >
         <Button
           variant="outlined"
           color="warning"

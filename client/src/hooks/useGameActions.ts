@@ -1,7 +1,23 @@
-import { useCallback, useMemo, type Dispatch } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ApiService } from '../services/endpoints';
-import { buildQuestionKey } from '../state/QuestionReducer';
-import type { GameAction, GameState, Player } from '../state/RootReducer';
+import { buildQuestionKey } from '../state/questionSlice';
+import { useAppDispatch, useAppSelector } from '../state/hooks';
+import { selectPlayers, selectCategories } from '../state/selectors';
+import {
+  addPlayer as addPlayerAction,
+  deletePlayer as deletePlayerAction,
+  addScore as addScoreAction,
+  subtractScore as subtractScoreAction,
+  resetScores as resetScoresAction,
+  type Player,
+} from '../state/playerSlice';
+import {
+  updateCategoryTitle as updateCategoryTitleAction,
+  updateQuestion as updateQuestionAction,
+  syncCategories,
+  markQuestionAnswered as markQuestionAnsweredAction,
+  markQuestionFailed as markQuestionFailedAction,
+} from '../state/questionSlice';
 
 type ScoreOp = (playerId: string, points: number) => Promise<void>;
 
@@ -22,29 +38,29 @@ export type GameActions = {
   markQuestionFailed: (categoryTitle: string, price: number) => Promise<void>;
 };
 
-export function useGameActions(
-  state: GameState,
-  dispatch: Dispatch<GameAction>,
-): GameActions {
+export function useGameActions(): GameActions {
+  const dispatch = useAppDispatch();
+  const players = useAppSelector(selectPlayers);
+  const categories = useAppSelector(selectCategories);
+
   const findCategoryIndex = useCallback(
-    (categoryTitle: string) =>
-      state.categories.findIndex((cat) => cat.title === categoryTitle),
-    [state.categories],
+    (categoryTitle: string) => categories.findIndex((cat) => cat.title === categoryTitle),
+    [categories],
   );
 
   const patchScore = useCallback(
     async (playerId: string, delta: number) => {
-      const current = state.players.find((p) => p.id === playerId);
+      const current = players.find((p) => p.id === playerId);
       if (!current) return;
       const nextScore = current.score + delta;
       await ApiService.patchPlayer(playerId, { score: nextScore });
-      const action: GameAction =
-        delta >= 0
-          ? { type: 'addScore', payload: { playerId, points: delta } }
-          : { type: 'subtractScore', payload: { playerId, points: -delta } };
-      dispatch(action);
+      if (delta >= 0) {
+        dispatch(addScoreAction({ playerId, points: delta }));
+      } else {
+        dispatch(subtractScoreAction({ playerId, points: -delta }));
+      }
     },
-    [state.players, dispatch],
+    [players, dispatch],
   );
 
   return useMemo<GameActions>(
@@ -53,13 +69,13 @@ export function useGameActions(
         const trimmed = name.trim();
         if (!trimmed) return null;
         const created = await ApiService.createPlayer({ name: trimmed });
-        dispatch({ type: 'addPlayer', payload: created });
+        dispatch(addPlayerAction(created));
         return created;
       },
 
       deletePlayer: async (playerId) => {
         await ApiService.deletePlayer(playerId);
-        dispatch({ type: 'deletePlayer', payload: playerId });
+        dispatch(deletePlayerAction(playerId));
       },
 
       addScore: (playerId, points) => patchScore(playerId, points),
@@ -67,24 +83,19 @@ export function useGameActions(
       subtractScore: (playerId, points) => patchScore(playerId, -points),
 
       resetScores: async () => {
-        await Promise.all(
-          state.players.map((p) => ApiService.patchPlayer(p.id, { score: 0 })),
-        );
-        dispatch({ type: 'resetScores' });
+        await Promise.all(players.map((p) => ApiService.patchPlayer(p.id, { score: 0 })));
+        dispatch(resetScoresAction());
       },
 
       addCategory: async () => {
         await ApiService.createCategory();
-        const categories = await ApiService.getCategories();
-        dispatch({ type: 'syncCategories', payload: categories });
+        const cats = await ApiService.getCategories();
+        dispatch(syncCategories(cats));
       },
 
       updateCategoryTitle: async (index, newTitle) => {
         await ApiService.patchCategory(index, { title: newTitle });
-        dispatch({
-          type: 'updateCategoryTitle',
-          payload: { index, newTitle },
-        });
+        dispatch(updateCategoryTitleAction({ index, newTitle }));
       },
 
       updateQuestion: async (categoryIndex, price, data) => {
@@ -93,10 +104,7 @@ export function useGameActions(
           answer: data.answer,
           image: data.image ?? null,
         });
-        dispatch({
-          type: 'updateQuestion',
-          payload: { categoryIndex, price, data },
-        });
+        dispatch(updateQuestionAction({ categoryIndex, price, data }));
       },
 
       markQuestionAnswered: async (categoryTitle, price) => {
@@ -106,10 +114,7 @@ export function useGameActions(
           isAnswered: true,
           answeredCorrectly: true,
         });
-        dispatch({
-          type: 'markQuestionAnswered',
-          payload: buildQuestionKey(categoryTitle, price),
-        });
+        dispatch(markQuestionAnsweredAction(buildQuestionKey(categoryTitle, price)));
       },
 
       markQuestionFailed: async (categoryTitle, price) => {
@@ -119,12 +124,9 @@ export function useGameActions(
           isAnswered: true,
           answeredCorrectly: false,
         });
-        dispatch({
-          type: 'markQuestionFailed',
-          payload: buildQuestionKey(categoryTitle, price),
-        });
+        dispatch(markQuestionFailedAction(buildQuestionKey(categoryTitle, price)));
       },
     }),
-    [dispatch, patchScore, state.players, findCategoryIndex],
+    [dispatch, patchScore, players, findCategoryIndex],
   );
 }

@@ -1,7 +1,9 @@
-import { useEffect, useState, type Dispatch } from 'react';
+import { useEffect, useState } from 'react';
 import { ApiService } from '../services/endpoints';
 import type { ApiError } from '../services/apiClient';
-import type { GameAction } from '../state/RootReducer';
+import { useAppDispatch } from '../state/hooks';
+import { syncPlayers } from '../state/playerSlice';
+import { syncCategories } from '../state/questionSlice';
 
 type BootstrapStatus = 'idle' | 'loading' | 'ready' | 'unauthorized' | 'error';
 
@@ -10,24 +12,25 @@ export type BootstrapState = {
   error: string | null;
 };
 
-export function useBootstrap(
-  dispatch: Dispatch<GameAction>,
-  enabled: boolean,
-): BootstrapState {
-  const [status, setStatus] = useState<BootstrapStatus>('idle');
+/**
+ * Bootstraps the game state from the server.
+ * @param enabled - Whether to enable the bootstrap.
+ * @returns The bootstrap state.
+ */
+export function useBootstrap(enabled: boolean): BootstrapState {
+  const dispatch = useAppDispatch();
+  const [status, setStatus] = useState<BootstrapStatus>(() => (enabled ? 'loading' : 'idle'));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    setStatus('loading');
-    setError(null);
 
     Promise.all([ApiService.getPlayers(), ApiService.getCategories()])
       .then(([players, categories]) => {
         if (cancelled) return;
-        dispatch({ type: 'syncPlayers', payload: players });
-        dispatch({ type: 'syncCategories', payload: categories });
+        dispatch(syncPlayers(players));
+        dispatch(syncCategories(categories));
         setStatus('ready');
       })
       .catch((err: ApiError) => {

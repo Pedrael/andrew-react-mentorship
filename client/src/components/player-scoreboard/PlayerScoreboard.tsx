@@ -1,14 +1,10 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import type { GameState } from '../../state/RootReducer';
+import { useAppSelector } from '../../state/hooks';
+import { selectPlayers } from '../../state/selectors';
 
-type PlayerScoreboardProps = {
-  state: GameState;
-};
-
-export default function PlayerScoreboard({ state }: PlayerScoreboardProps) {
-  const { players } = state;
-
+export default function PlayerScoreboard() {
+  const players = useAppSelector(selectPlayers);
   const sorted = [...players].sort((a, b) => b.score - a.score);
 
   return (

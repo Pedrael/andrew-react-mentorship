@@ -1,6 +1,6 @@
 import { apiRequest, type HttpMethod } from './apiClient';
-import type { Player } from '../state/PlayerReducer';
-import type { Category, Question } from '../state/QuestionReducer';
+import type { Player } from '../state/playerSlice';
+import type { Category, Question } from '../state/questionSlice';
 
 const apiServiceRequest = async <T>(
   endpoint: string,

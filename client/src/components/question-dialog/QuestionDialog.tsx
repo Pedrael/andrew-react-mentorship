@@ -7,17 +7,30 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useEffect, useMemo, useRef, useState, type Dispatch } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { buildQuestionKey } from '../../state/QuestionReducer';
+import { buildQuestionKey } from '../../state/questionSlice';
 import ControllableTextField from '../controllable-text-field/ControllableTextField';
-import {
-  selectWinnerIfGameEnded,
-  type GameAction,
-  type GameState,
-  type Player,
-} from '../../state/RootReducer';
 import type { GameActions } from '../../hooks/useGameActions';
+import { useAppDispatch, useAppSelector } from '../../state/hooks';
+import {
+  selectPlayers,
+  selectRevealedQuestionKey,
+  selectGameWinner,
+} from '../../state/selectors';
+import {
+  clearRevealedQuestionAnswer,
+  revealQuestionAnswer,
+  markQuestionAnswered,
+  markQuestionFailed,
+  markQuestionAuctioned,
+} from '../../state/questionSlice';
+import {
+  addScore,
+  subtractScore,
+  selectNextPlayer,
+  type Player,
+} from '../../state/playerSlice';
 
 export type QuestionDialogData = {
   category: string;
@@ -28,8 +41,6 @@ export type QuestionDialogData = {
 };
 
 type QuestionDialogProps = {
-  state: GameState;
-  dispatch: Dispatch<GameAction>;
   actions?: GameActions;
   question: QuestionDialogData | null;
   isAdmin: boolean;
@@ -44,8 +55,6 @@ type QuestionDialogProps = {
 };
 
 export default function QuestionDialog({
-  state,
-  dispatch,
   actions,
   question,
   isAdmin = false,
@@ -58,13 +67,17 @@ export default function QuestionDialog({
   onQuestionSave,
   onLiveEdit,
 }: QuestionDialogProps) {
-  const { players, revealedQuestionKey } = state;
+  const dispatch = useAppDispatch();
+  const players = useAppSelector(selectPlayers);
+  const revealedQuestionKey = useAppSelector(selectRevealedQuestionKey);
+  const gameWinner = useAppSelector(selectGameWinner);
+
   const [winner, setWinner] = useState<Player | null>(null);
   const [auctionActive, setAuctionActive] = useState(false);
   const [selectorPlayerId, setSelectorPlayerId] = useState<string | null>(null);
   const [bids, setBids] = useState<Record<string, number>>({});
   const [auctionWrongIds, setAuctionWrongIds] = useState<Set<string>>(() => new Set());
-  // Local editable fields — initialised from props, saved to context on close
+
   const { control, reset, getValues, watch } = useForm<{
     question: string;
     answer: string;
@@ -72,7 +85,6 @@ export default function QuestionDialog({
   }>({
     defaultValues: { question: '', answer: '', image: '' },
   });
-  // Watched image value drives the live preview as the admin types
   const editImage = watch('image');
 
   const selectedPlayer = players.find((p) => p.isSelected);
@@ -96,8 +108,7 @@ export default function QuestionDialog({
     [auctionPlayers, bids],
   );
 
-  const currentBidder =
-    activeBidders.find((p) => !auctionWrongIds.has(p.id)) ?? null;
+  const currentBidder = activeBidders.find((p) => !auctionWrongIds.has(p.id)) ?? null;
 
   const closeDialog = () => {
     if (isAdmin && onQuestionSave) {
@@ -108,7 +119,7 @@ export default function QuestionDialog({
         image: img.trim() || undefined,
       });
     }
-    dispatch({ type: 'clearRevealedQuestionAnswer' });
+    dispatch(clearRevealedQuestionAnswer());
     onClose();
   };
 
@@ -129,37 +140,35 @@ export default function QuestionDialog({
   const finalizeQuestionAnswered = async (pointsWinner?: Player, points?: number) => {
     if (!question || !questionKey) return;
     const outcome = pointsWinner && points && points > 0 ? 'correct' : 'failed';
-    dispatch({ type: 'revealQuestionAnswer', payload: questionKey });
+    dispatch(revealQuestionAnswer(questionKey));
     if (outcome === 'correct') {
       if (actions) {
         await actions.addScore(pointsWinner!.id, points!);
         await actions.markQuestionAnswered(question.category, question.price);
       } else {
-        dispatch({ type: 'addScore', payload: { playerId: pointsWinner!.id, points: points! } });
-        dispatch({ type: 'markQuestionAnswered', payload: questionKey });
+        dispatch(addScore({ playerId: pointsWinner!.id, points: points! }));
+        dispatch(markQuestionAnswered(questionKey));
       }
     } else if (actions) {
       await actions.markQuestionFailed(question.category, question.price);
     } else {
-      dispatch({ type: 'markQuestionFailed', payload: questionKey });
+      dispatch(markQuestionFailed(questionKey));
     }
-    dispatch({ type: 'selectNextPlayer' });
+    dispatch(selectNextPlayer());
     onAnswerReveal?.(questionKey, outcome);
-    setWinner(selectWinnerIfGameEnded(state));
+    setWinner(gameWinner);
   };
 
-  // Stage 1 — selected player answered correctly (full question value)
   const handleCorrectAnswerStage1 = () => {
     if (!selectedPlayer) return;
     void finalizeQuestionAnswered(selectedPlayer, scoreDelta);
   };
 
-  // Stage 1 — selected player failed; start auction (selector keeps their score)
   const handleFailQuestion = () => {
     if (!selectedPlayer || !questionKey) return;
     setAuctionActive(true);
     setSelectorPlayerId(selectedPlayer.id);
-    dispatch({ type: 'markQuestionAuctioned', payload: questionKey });
+    dispatch(markQuestionAuctioned(questionKey));
     onMarkAuctioned?.(questionKey);
   };
 
@@ -190,10 +199,7 @@ export default function QuestionDialog({
     if (actions) {
       void actions.subtractScore(player.id, bid);
     } else {
-      dispatch({
-        type: 'subtractScore',
-        payload: { playerId: player.id, points: bid },
-      });
+      dispatch(subtractScore({ playerId: player.id, points: bid }));
     }
     const nextWrongIds = new Set(auctionWrongIds).add(player.id);
     setAuctionWrongIds(nextWrongIds);
@@ -207,7 +213,6 @@ export default function QuestionDialog({
     void finalizeQuestionAnswered();
   };
 
-  // Sync editable fields when a new question is opened
   useEffect(() => {
     reset({
       question: question?.question ?? '',
@@ -216,13 +221,11 @@ export default function QuestionDialog({
     });
   }, [question, reset]);
 
-  // Keep a stable ref so the broadcast effect doesn't need onLiveEdit as a dep
   const onLiveEditRef = useRef(onLiveEdit);
   useEffect(() => {
     onLiveEditRef.current = onLiveEdit;
   });
 
-  // Broadcast every field edit to the player page
   useEffect(() => {
     if (!isAdmin || !question) return;
     const subscription = watch((values) => {
@@ -237,7 +240,7 @@ export default function QuestionDialog({
 
   useEffect(() => {
     if (!isOpen || !questionKey) {
-      dispatch({ type: 'clearRevealedQuestionAnswer' });
+      dispatch(clearRevealedQuestionAnswer());
       resetAuctionState();
       setWinner(null);
       previousQuestionKeyRef.current = questionKey;
@@ -245,7 +248,7 @@ export default function QuestionDialog({
     }
 
     if (previousQuestionKeyRef.current && previousQuestionKeyRef.current !== questionKey) {
-      dispatch({ type: 'clearRevealedQuestionAnswer' });
+      dispatch(clearRevealedQuestionAnswer());
       resetAuctionState();
       setWinner(null);
     }
@@ -265,7 +268,6 @@ export default function QuestionDialog({
       </DialogTitle>
 
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-        {/* Question text */}
         {isAdmin ? (
           <ControllableTextField
             name="question"
@@ -279,7 +281,6 @@ export default function QuestionDialog({
           <Typography variant="body1">{question?.question}</Typography>
         )}
 
-        {/* Image URL */}
         {isAdmin && (
           <ControllableTextField
             name="image"
@@ -289,7 +290,6 @@ export default function QuestionDialog({
           />
         )}
 
-        {/* Image preview */}
         {(editImage || question?.image) && (
           <img
             src={isAdmin ? editImage : question?.image}
@@ -299,7 +299,6 @@ export default function QuestionDialog({
           />
         )}
 
-        {/* Answer */}
         {isAdmin ? (
           <ControllableTextField name="answer" control={control} label="Answer" fullWidth />
         ) : (
@@ -314,7 +313,6 @@ export default function QuestionDialog({
           </Typography>
         )}
 
-        {/* Auction phase — selector failed, other players bid and answer in bid order */}
         {isAdmin && auctionActive && (
           <Box>
             <Typography variant="caption" color="warning.main" sx={{ display: 'block', mb: 1 }}>
@@ -356,7 +354,11 @@ export default function QuestionDialog({
             {activeBidders.length > 0 && (
               <>
                 <Divider sx={{ my: 1 }} />
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                >
                   Answer order (highest bid first)
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
@@ -425,11 +427,14 @@ export default function QuestionDialog({
 
       {isAdmin && (
         <DialogActions>
-          {/* Stage 1 controls — hidden once auction starts */}
           {!auctionActive && (
             <>
               {!selectedPlayer && (
-                <Typography variant="caption" color="error" sx={{ flex: 1, textAlign: 'left', px: 1 }}>
+                <Typography
+                  variant="caption"
+                  color="error"
+                  sx={{ flex: 1, textAlign: 'left', px: 1 }}
+                >
                   Select a player first.
                 </Typography>
               )}
