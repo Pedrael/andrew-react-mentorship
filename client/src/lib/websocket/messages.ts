@@ -38,8 +38,11 @@ export const CLOSE_QUESTION_EVENT = 'close_question';
 
 export const REVEAL_ANSWER_EVENT = 'reveal_answer';
 
+export type QuestionOutcome = 'correct' | 'failed';
+
 export interface RevealAnswerPayload {
   questionKey: string;
+  outcome?: QuestionOutcome;
 }
 
 export const MARK_AUCTIONED_EVENT = 'mark_auctioned';

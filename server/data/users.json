@@ -1,0 +1,10 @@
+{
+  "users": [
+    {
+      "id": "5c7397d4-af13-4f72-bfca-ce8310930eeb",
+      "username": "admin",
+      "passwordSalt": "e70cb8a5affc7fafbb5a0df6b38fb940",
+      "passwordHash": "81653906b6c1d68f9f0b63ec170d3bba35568dc4a35bcf8de67e6f3d0daf1b7f"
+    }
+  ]
+}

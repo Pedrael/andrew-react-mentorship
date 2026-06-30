@@ -1,0 +1,181 @@
+{
+  "categories": [
+    {
+      "title": "Category 1",
+      "questions": [
+        {
+          "price": 100,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 200,
+          "question": "Test 123",
+          "answer": "asdasdad",
+          "isAnswered": true,
+          "answeredCorrectly": false
+        },
+        {
+          "price": 300,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 400,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 500,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        }
+      ]
+    },
+    {
+      "title": "asd",
+      "questions": [
+        {
+          "price": 100,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 200,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 300,
+          "question": "Question 1",
+          "answer": "Answer 1",
+          "isAnswered": true,
+          "answeredCorrectly": false
+        },
+        {
+          "price": 400,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 500,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        }
+      ]
+    },
+    {
+      "title": "Category 3",
+      "questions": [
+        {
+          "price": 100,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 200,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 300,
+          "question": "asdsada",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 400,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 500,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        }
+      ]
+    },
+    {
+      "title": "Test",
+      "questions": [
+        {
+          "price": 100,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 200,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 300,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 400,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 500,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        }
+      ]
+    },
+    {
+      "title": "Category 5",
+      "questions": [
+        {
+          "price": 100,
+          "question": "",
+          "answer": "asdadas",
+          "isAnswered": false
+        },
+        {
+          "price": 200,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 300,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 400,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        },
+        {
+          "price": 500,
+          "question": "",
+          "answer": "",
+          "isAnswered": false
+        }
+      ]
+    }
+  ]
+}

@@ -5,40 +5,58 @@ import FormLabel from '@mui/material/FormLabel';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import Typography from '@mui/material/Typography';
-import TextField from '@mui/material/TextField';
-import { useState, type ChangeEvent } from 'react';
-import { useGame } from '../../hooks/useGame';
+import { type ChangeEvent, type Dispatch } from 'react';
+import { useForm } from 'react-hook-form';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
-import type { Player } from '../../context/GameContext';
+import type { GameAction, GameState } from '../../state/RootReducer';
+import type { GameActions } from '../../hooks/useGameActions';
+import ControllableTextField from '../controllable-text-field/ControllableTextField';
 
-export default function PlayerManagementForm() {
-  const [newPlayerName, setNewPlayerName] = useState<string>('');
+type PlayerManagementFormProps = {
+  state: GameState;
+  dispatch: Dispatch<GameAction>;
+  actions: GameActions;
+};
 
-  const { players, addPlayer, deletePlayer, selectPlayer } = useGame();
+type AddPlayerFormValues = {
+  playerName: string;
+};
+
+export default function PlayerManagementForm({
+  state,
+  dispatch,
+  actions,
+}: PlayerManagementFormProps) {
+  const { players } = state;
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<AddPlayerFormValues>({
+    defaultValues: { playerName: '' },
+  });
+
   const selectedPlayerId = players.find((player) => player.isSelected)?.id ?? '';
 
   const handleChange = (_event: ChangeEvent<HTMLInputElement>, value: string) => {
-    selectPlayer(value);
+    dispatch({ type: 'selectPlayer', payload: value });
   };
 
-  const handleAddPlayer = () => {
-    const newPlayer: Player = {
-      id: crypto.randomUUID(),
-      name: newPlayerName,
-      score: 0,
-      isSelected: false,
-    };
-    addPlayer(newPlayer);
+  const onAddPlayer = async ({ playerName }: AddPlayerFormValues) => {
+    await actions.addPlayer(playerName.trim());
+    reset();
   };
 
   const handleDeletePlayer = (playerId: string) => {
-    deletePlayer(playerId);
+    void actions.deletePlayer(playerId);
   };
 
   return (
-    <Box component="form" noValidate autoComplete="off">
+    <Box component="form" onSubmit={handleSubmit(onAddPlayer)} noValidate autoComplete="off">
       <FormControl fullWidth>
         <FormLabel id="player-management-label">Players</FormLabel>
         <RadioGroup
@@ -76,12 +94,21 @@ export default function PlayerManagementForm() {
                 </IconButton>
               </Box>
             ))}
-            <TextField
+            <ControllableTextField
+              name="playerName"
+              control={control}
+              rules={{
+                required: 'Player name is required',
+                validate: (value) =>
+                  value.trim().length > 0 || 'Player name is required',
+              }}
               id="playerName"
               type="text"
-              onChange={(_event) => setNewPlayerName(_event.target.value)}
+              disabled={isSubmitting}
             />
-            <Button variant="contained" onClick={() => handleAddPlayer()}>Add</Button>
+            <Button type="submit" variant="contained" disabled={isSubmitting}>
+              Add
+            </Button>
           </Box>
         </RadioGroup>
       </FormControl>

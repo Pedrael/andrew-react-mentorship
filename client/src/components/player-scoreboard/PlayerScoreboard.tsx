@@ -1,9 +1,13 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { useGame } from '../../hooks/useGame';
+import type { GameState } from '../../state/RootReducer';
 
-export default function PlayerScoreboard() {
-  const { players } = useGame();
+type PlayerScoreboardProps = {
+  state: GameState;
+};
+
+export default function PlayerScoreboard({ state }: PlayerScoreboardProps) {
+  const { players } = state;
 
   const sorted = [...players].sort((a, b) => b.score - a.score);
 

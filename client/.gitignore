@@ -1,0 +1,17 @@
+# Env (keep .env.example)
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist
+dist-ssr
+
+# Vite cache
+.vite
+
+# Test / coverage
+coverage
+
+# Logs
+*.log
