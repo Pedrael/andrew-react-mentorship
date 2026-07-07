@@ -11,19 +11,22 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import QuestionDialog from '../question-dialog/QuestionDialog';
 import type { QuestionDialogData } from '../question-dialog/QuestionDialog';
-import { buildQuestionKey } from '../../state/questionSlice';
-import type { GameActions } from '../../hooks/useGameActions';
+import { buildQuestionKey } from '../../state/game/gameUi.slice';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
+import { selectCategories } from '../../state/categories/categories.selectors';
 import {
-  selectCategories,
   selectAnsweredKeys,
-  selectFailedKeys,
   selectAuctionedKeys,
-} from '../../state/selectors';
-import { updateCategoryTitle, updateQuestion, addCategory } from '../../state/questionSlice';
+  selectFailedKeys,
+} from '../../state/game/gameUi.selectors';
+import {
+  categoriesApi,
+  useCreateCategoryMutation,
+  usePatchCategoryMutation,
+  usePatchCategoryQuestionMutation,
+} from '../../state/categories/categories.api';
 
 type JeopardyTableProps = {
-  actions?: GameActions;
   isAdmin: boolean;
   onQuestionOpen?: (question: QuestionDialogData) => void;
   onQuestionClose?: () => void;
@@ -33,7 +36,6 @@ type JeopardyTableProps = {
 };
 
 export default function JeopardyTable({
-  actions,
   isAdmin = false,
   onQuestionOpen,
   onQuestionClose,
@@ -46,6 +48,9 @@ export default function JeopardyTable({
   const answeredQuestionKeys = useAppSelector(selectAnsweredKeys);
   const failedQuestionKeys = useAppSelector(selectFailedKeys);
   const auctionedQuestionKeys = useAppSelector(selectAuctionedKeys);
+  const [createCategory] = useCreateCategoryMutation();
+  const [patchCategory] = usePatchCategoryMutation();
+  const [patchCategoryQuestion] = usePatchCategoryQuestionMutation();
 
   const [selectedQuestion, setSelectedQuestion] = React.useState<QuestionDialogData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
@@ -103,10 +108,29 @@ export default function JeopardyTable({
 
   const openDialog = (cellData: QuestionDialogData, categoryIndex: number, price: number) => {
     questionSaverRef.current = (data) => {
-      if (actions) {
-        void actions.updateQuestion(categoryIndex, price, data);
+      if (isAdmin) {
+        void patchCategoryQuestion({
+          index: categoryIndex,
+          price,
+          payload: {
+            question: data.question,
+            answer: data.answer,
+            image: data.image ?? null,
+          },
+        });
       } else {
-        dispatch(updateQuestion({ categoryIndex, price, data }));
+        dispatch(
+          categoriesApi.util.updateQueryData('getCategories', undefined, (draft) => {
+            const category = draft[categoryIndex];
+            if (!category) return;
+            const questionIndex = category.questions.findIndex((question) => question.price === price);
+            if (questionIndex === -1) {
+              category.questions.push({ price, ...data, isAnswered: false });
+            } else {
+              Object.assign(category.questions[questionIndex], data);
+            }
+          }),
+        );
       }
     };
     questionLiveEditRef.current = (data) => onQuestionLiveEdit?.({ ...cellData, ...data });
@@ -164,12 +188,15 @@ export default function JeopardyTable({
                       value={cat.title}
                       onChange={(e) => {
                         const newTitle = e.target.value;
-                        dispatch(updateCategoryTitle({ index: catIdx, newTitle }));
+                        dispatch(
+                          categoriesApi.util.updateQueryData('getCategories', undefined, (draft) => {
+                            const category = draft[catIdx];
+                            if (category) category.title = newTitle;
+                          }),
+                        );
                       }}
                       onBlur={(e) => {
-                        if (actions) {
-                          void actions.updateCategoryTitle(catIdx, e.target.value);
-                        }
+                        void patchCategory({ index: catIdx, payload: { title: e.target.value } });
                       }}
                       inputProps={{ 'aria-label': 'category name' }}
                       sx={{
@@ -265,13 +292,7 @@ export default function JeopardyTable({
         <Box sx={{ mt: 1 }}>
           <Button
             variant="outlined"
-            onClick={() => {
-              if (actions) {
-                void actions.addCategory();
-              } else {
-                dispatch(addCategory());
-              }
-            }}
+            onClick={() => void createCategory()}
             sx={{ borderStyle: 'dashed' }}
           >
             + Add category
@@ -280,7 +301,6 @@ export default function JeopardyTable({
       )}
 
       <QuestionDialog
-        actions={actions}
         question={selectedQuestion}
         isAdmin={isAdmin}
         isOpen={isDialogOpen}

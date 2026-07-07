@@ -1,25 +1,27 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { enableMapSet } from 'immer';
-import playerReducer from './playerSlice';
-import questionReducer from './questionSlice';
+import { baseApi } from './api/baseApi';
+import gameUiReducer from './game/gameUi.slice';
+import './players/players.api';
+import './categories/categories.api';
 
 enableMapSet();
 
 export const store = configureStore({
   reducer: {
-    player: playerReducer,
-    question: questionReducer,
+    [baseApi.reducerPath]: baseApi.reducer,
+    gameUi: gameUiReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
         ignoredPaths: [
-          'question.answeredQuestionKeys',
-          'question.failedQuestionKeys',
-          'question.auctionedQuestionKeys',
+          'gameUi.answeredQuestionKeys',
+          'gameUi.failedQuestionKeys',
+          'gameUi.auctionedQuestionKeys',
         ],
       },
-    }),
+    }).concat(baseApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

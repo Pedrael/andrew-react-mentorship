@@ -9,28 +9,24 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { buildQuestionKey } from '../../state/questionSlice';
+import { buildQuestionKey } from '../../state/game/gameUi.slice';
 import ControllableTextField from '../controllable-text-field/ControllableTextField';
-import type { GameActions } from '../../hooks/useGameActions';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
-import {
-  selectPlayers,
-  selectRevealedQuestionKey,
-  selectGameWinner,
-} from '../../state/selectors';
+import { selectPlayers, selectPlayerIds } from '../../state/players/players.selectors';
+import { selectRevealedQuestionKey } from '../../state/game/gameUi.selectors';
+import { selectGameWinner } from '../../state/game/game.selectors';
 import {
   clearRevealedQuestionAnswer,
-  revealQuestionAnswer,
   markQuestionAnswered,
-  markQuestionFailed,
   markQuestionAuctioned,
-} from '../../state/questionSlice';
-import {
-  addScore,
-  subtractScore,
+  markQuestionFailed,
+  revealQuestionAnswer,
   selectNextPlayer,
-  type Player,
-} from '../../state/playerSlice';
+} from '../../state/game/gameUi.slice';
+import { usePatchCategoryQuestionMutation } from '../../state/categories/categories.api';
+import { selectCategories } from '../../state/categories/categories.selectors';
+import { usePatchPlayerMutation } from '../../state/players/players.api';
+import type { Player } from '../../state/players/players.types';
 
 export type QuestionDialogData = {
   category: string;
@@ -41,7 +37,6 @@ export type QuestionDialogData = {
 };
 
 type QuestionDialogProps = {
-  actions?: GameActions;
   question: QuestionDialogData | null;
   isAdmin: boolean;
   isOpen: boolean;
@@ -55,7 +50,6 @@ type QuestionDialogProps = {
 };
 
 export default function QuestionDialog({
-  actions,
   question,
   isAdmin = false,
   isOpen,
@@ -69,8 +63,12 @@ export default function QuestionDialog({
 }: QuestionDialogProps) {
   const dispatch = useAppDispatch();
   const players = useAppSelector(selectPlayers);
+  const playerIds = useAppSelector(selectPlayerIds);
+  const categories = useAppSelector(selectCategories);
   const revealedQuestionKey = useAppSelector(selectRevealedQuestionKey);
   const gameWinner = useAppSelector(selectGameWinner);
+  const [patchPlayer] = usePatchPlayerMutation();
+  const [patchCategoryQuestion] = usePatchCategoryQuestionMutation();
 
   const [winner, setWinner] = useState<Player | null>(null);
   const [auctionActive, setAuctionActive] = useState(false);
@@ -110,6 +108,9 @@ export default function QuestionDialog({
 
   const currentBidder = activeBidders.find((p) => !auctionWrongIds.has(p.id)) ?? null;
 
+  const findCategoryIndex = (categoryTitle: string) =>
+    categories.findIndex((category) => category.title === categoryTitle);
+
   const closeDialog = () => {
     if (isAdmin && onQuestionSave) {
       const { question: q, answer: a, image: img } = getValues();
@@ -141,20 +142,37 @@ export default function QuestionDialog({
     if (!question || !questionKey) return;
     const outcome = pointsWinner && points && points > 0 ? 'correct' : 'failed';
     dispatch(revealQuestionAnswer(questionKey));
+    const categoryIndex = findCategoryIndex(question.category);
+
     if (outcome === 'correct') {
-      if (actions) {
-        await actions.addScore(pointsWinner!.id, points!);
-        await actions.markQuestionAnswered(question.category, question.price);
-      } else {
-        dispatch(addScore({ playerId: pointsWinner!.id, points: points! }));
-        dispatch(markQuestionAnswered(questionKey));
+      if (isAdmin) {
+        await patchPlayer({
+          id: pointsWinner!.id,
+          payload: { score: pointsWinner!.score + points! },
+        });
+        if (categoryIndex !== -1) {
+          await patchCategoryQuestion({
+            index: categoryIndex,
+            price: question.price,
+            payload: { isAnswered: true, answeredCorrectly: true },
+          });
+        }
       }
-    } else if (actions) {
-      await actions.markQuestionFailed(question.category, question.price);
+      dispatch(markQuestionAnswered(questionKey));
+    } else if (isAdmin) {
+      if (categoryIndex !== -1) {
+        await patchCategoryQuestion({
+          index: categoryIndex,
+          price: question.price,
+          payload: { isAnswered: true, answeredCorrectly: false },
+        });
+      }
+      dispatch(markQuestionFailed(questionKey));
     } else {
       dispatch(markQuestionFailed(questionKey));
     }
-    dispatch(selectNextPlayer());
+
+    dispatch(selectNextPlayer(playerIds));
     onAnswerReveal?.(questionKey, outcome);
     setWinner(gameWinner);
   };
@@ -196,10 +214,11 @@ export default function QuestionDialog({
   const handleAuctionWrong = (player: Player) => {
     const bid = bids[player.id] ?? 0;
     if (!questionKey || bid <= 0) return;
-    if (actions) {
-      void actions.subtractScore(player.id, bid);
-    } else {
-      dispatch(subtractScore({ playerId: player.id, points: bid }));
+    if (isAdmin) {
+      void patchPlayer({
+        id: player.id,
+        payload: { score: player.score - bid },
+      });
     }
     const nextWrongIds = new Set(auctionWrongIds).add(player.id);
     setAuctionWrongIds(nextWrongIds);

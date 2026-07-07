@@ -10,23 +10,24 @@ import { useForm } from 'react-hook-form';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
-import type { GameActions } from '../../hooks/useGameActions';
 import ControllableTextField from '../controllable-text-field/ControllableTextField';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
-import { selectPlayers } from '../../state/selectors';
-import { selectPlayer } from '../../state/playerSlice';
-
-type PlayerManagementFormProps = {
-  actions: GameActions;
-};
+import { selectPlayers } from '../../state/players/players.selectors';
+import {
+  useCreatePlayerMutation,
+  useDeletePlayerMutation,
+} from '../../state/players/players.api';
+import { clearSelectedPlayerIfDeleted, selectPlayer } from '../../state/game/gameUi.slice';
 
 type AddPlayerFormValues = {
   playerName: string;
 };
 
-export default function PlayerManagementForm({ actions }: PlayerManagementFormProps) {
+export default function PlayerManagementForm() {
   const dispatch = useAppDispatch();
   const players = useAppSelector(selectPlayers);
+  const [createPlayer, { isLoading: isCreating }] = useCreatePlayerMutation();
+  const [deletePlayer] = useDeletePlayerMutation();
 
   const {
     control,
@@ -44,12 +45,15 @@ export default function PlayerManagementForm({ actions }: PlayerManagementFormPr
   };
 
   const onAddPlayer = async ({ playerName }: AddPlayerFormValues) => {
-    await actions.addPlayer(playerName.trim());
+    const trimmed = playerName.trim();
+    if (!trimmed) return;
+    await createPlayer({ name: trimmed });
     reset();
   };
 
-  const handleDeletePlayer = (playerId: string) => {
-    void actions.deletePlayer(playerId);
+  const handleDeletePlayer = async (playerId: string) => {
+    dispatch(clearSelectedPlayerIfDeleted(playerId));
+    await deletePlayer(playerId);
   };
 
   return (
@@ -86,7 +90,7 @@ export default function PlayerManagementForm({ actions }: PlayerManagementFormPr
                     </Box>
                   }
                 />
-                <IconButton onClick={() => handleDeletePlayer(player.id)}>
+                <IconButton onClick={() => void handleDeletePlayer(player.id)}>
                   <ClearIcon />
                 </IconButton>
               </Box>
@@ -100,9 +104,9 @@ export default function PlayerManagementForm({ actions }: PlayerManagementFormPr
               }}
               id="playerName"
               type="text"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isCreating}
             />
-            <Button type="submit" variant="contained" disabled={isSubmitting}>
+            <Button type="submit" variant="contained" disabled={isSubmitting || isCreating}>
               Add
             </Button>
           </Box>

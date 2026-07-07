@@ -1,1 +1,32 @@
-[]
+[
+  {
+    "id": "8bf17d2b-b77a-437c-8802-eadec0b52865",
+    "name": "Player 1",
+    "score": 0,
+    "isSelected": false
+  },
+  {
+    "id": "d88dde3b-d7a4-4121-abd6-bf06595c12da",
+    "name": "Player 2",
+    "score": -200,
+    "isSelected": false
+  },
+  {
+    "id": "37546920-e907-42e0-b8f9-082eb14400b9",
+    "name": "Player 3",
+    "score": 100,
+    "isSelected": false
+  },
+  {
+    "id": "a292f977-fd21-46e5-a82e-3a8c896e7637",
+    "name": "Player 4",
+    "score": -100,
+    "isSelected": false
+  },
+  {
+    "id": "ff8e4eee-45d0-4985-bcc9-eca4be0ae4b9",
+    "name": "Player 5",
+    "score": -300,
+    "isSelected": false
+  }
+]

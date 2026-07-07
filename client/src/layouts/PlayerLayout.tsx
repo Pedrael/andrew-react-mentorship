@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import JeopardyTable from '../components/jeopardy-table/JeopardyTable';
 import QuestionDialog from '../components/question-dialog/QuestionDialog';
 import type { QuestionDialogData } from '../components/question-dialog/QuestionDialog';
-import { useBootstrap } from '../hooks/useBootstrap';
 import { logout } from '../services/auth';
 import { useWebSocket } from '../lib/websocket/useWebSocket';
 import {
@@ -21,31 +21,43 @@ import {
 } from '../lib/websocket/messages';
 import PlayerScoreboard from '../components/player-scoreboard/PlayerScoreboard';
 import { useAppDispatch } from '../state/hooks';
+import { categoriesApi } from '../state/categories/categories.api';
+import type { Category } from '../state/categories/categories.types';
+import { useGetCategoriesQuery } from '../state/categories/categories.api';
+import { playersApi, useGetPlayersQuery } from '../state/players/players.api';
 import {
   markQuestionAnswered,
   markQuestionFailed,
   markQuestionAuctioned,
-  syncCategories,
-  type Category,
-} from '../state/questionSlice';
-import { syncPlayers } from '../state/playerSlice';
+} from '../state/game/gameUi.slice';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080';
+
+function isUnauthorized(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    (error as FetchBaseQueryError).status === 401
+  );
+}
 
 export default function PlayerLayout() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const bootstrap = useBootstrap(true);
   const [openedQuestion, setOpenedQuestion] = useState<QuestionDialogData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
 
+  const { error: playersError } = useGetPlayersQuery(undefined, { skip: true });
+  const { error: categoriesError } = useGetCategoriesQuery(undefined, { skip: true });
+
   useEffect(() => {
-    if (bootstrap.status === 'unauthorized') {
+    if (isUnauthorized(playersError) || isUnauthorized(categoriesError)) {
       logout();
       navigate('/login', { replace: true });
     }
-  }, [bootstrap.status, navigate]);
+  }, [playersError, categoriesError, navigate]);
 
   const closeDialog = useCallback(() => {
     setIsDialogOpen(false);
@@ -71,12 +83,21 @@ export default function PlayerLayout() {
       } else if (event === UPDATE_QUESTION_EVENT) {
         setOpenedQuestion(payload as QuestionDialogData);
       } else if (event === SYNC_CATEGORIES_EVENT) {
-        dispatch(syncCategories(payload as Category[]));
+        dispatch(
+          categoriesApi.util.upsertQueryData('getCategories', undefined, payload as Category[]),
+        );
       } else if (event === MARK_AUCTIONED_EVENT) {
         const { questionKey } = payload as MarkAuctionedPayload;
         dispatch(markQuestionAuctioned(questionKey));
       } else if (event === PLAYERS_UPDATE_EVENT) {
-        dispatch(syncPlayers(payload as PlayersUpdatePayload));
+        const players = payload as PlayersUpdatePayload;
+        dispatch(
+          playersApi.util.upsertQueryData(
+            'getPlayers',
+            undefined,
+            players.map(({ id, name, score }) => ({ id, name, score })),
+          ),
+        );
       }
     },
     [closeDialog, dispatch],

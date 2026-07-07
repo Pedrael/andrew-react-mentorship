@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useAppSelector } from '../../state/hooks';
-import { selectPlayers } from '../../state/selectors';
+import { selectPlayers } from '../../state/players/players.selectors';
 
 export default function PlayerScoreboard() {
   const players = useAppSelector(selectPlayers);
