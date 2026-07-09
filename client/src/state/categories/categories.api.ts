@@ -30,7 +30,8 @@ export const categoriesApi = baseApi.injectEndpoints({
       query: (body) => ({
         url: '/api/categories',
         method: 'POST',
-        body: body ?? null,
+        // Send `{}` (not null): fetchBaseQuery's isJsonifiable() throws on null.
+        body: body ?? {},
       }),
       invalidatesTags: ['Categories'],
       async onQueryStarted(_arg, { dispatch, queryFulfilled }) {

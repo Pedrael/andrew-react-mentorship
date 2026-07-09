@@ -1,5 +1,4 @@
 import { baseApi } from '../api/baseApi';
-import { saveAccessToken } from '../../services/authStorage';
 
 export type TokenResponse = {
   access_token: string;
@@ -20,10 +19,6 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
         body: { grant_type: 'password', username, password },
       }),
-      async onQueryStarted(_arg, { queryFulfilled }) {
-        const { data } = await queryFulfilled;
-        saveAccessToken(data.access_token);
-      },
     }),
   }),
 });

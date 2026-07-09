@@ -113,6 +113,22 @@ export default function JeopardyTable({
     return map;
   }, [categoriesData]);
 
+  // Persisted per-question outcome (survives refresh); the gameUi Sets below
+  // are the live overlay for the current session.
+  const persistedOutcomes = React.useMemo(() => {
+    const answered = new Set<string>();
+    const failed = new Set<string>();
+    for (const category of categoriesData) {
+      for (const q of category.questions) {
+        if (!q.isAnswered) continue;
+        const key = buildQuestionKey(category.id, q.price);
+        if (q.answeredCorrectly === false) failed.add(key);
+        else answered.add(key);
+      }
+    }
+    return { answered, failed };
+  }, [categoriesData]);
+
   const openDialog = (cellData: QuestionDialogData, categoryIndex: number, price: number) => {
     setSelected({ data: cellData, categoryIndex, price });
     setIsDialogOpen(true);
@@ -199,8 +215,10 @@ export default function JeopardyTable({
                 {prices.map((price) => {
                   const questionKey = buildQuestionKey(cat.id, price);
                   const cellQuestion = questionMap.get(questionKey);
-                  const isAnsweredCorrectly = answeredQuestionKeys.has(questionKey);
-                  const isAnsweredFailed = failedQuestionKeys.has(questionKey);
+                  const isAnsweredCorrectly =
+                    answeredQuestionKeys.has(questionKey) || persistedOutcomes.answered.has(questionKey);
+                  const isAnsweredFailed =
+                    failedQuestionKeys.has(questionKey) || persistedOutcomes.failed.has(questionKey);
                   const isClosed = isAnsweredCorrectly || isAnsweredFailed;
                   const isAuctioned = auctionedQuestionKeys.has(questionKey);
                   const hasNoQuestion = !cellQuestion;

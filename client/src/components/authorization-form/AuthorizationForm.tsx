@@ -7,6 +7,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import { useLoginMutation, type TokenResponse } from '../../state/auth/auth.api';
+import { saveAccessToken } from '../../services/authStorage';
 import ControllableTextField from '../controllable-text-field/ControllableTextField';
 
 function getErrorMessage(error: unknown): string {
@@ -51,6 +52,8 @@ export default function AuthorizationForm({
     setError(null);
     try {
       const token = await login({ username: username.trim(), password }).unwrap();
+      // Persist before navigating so the auth guard sees the token on first try.
+      saveAccessToken(token.access_token);
       resetField('password');
       onSuccess?.(token);
     } catch (err) {
