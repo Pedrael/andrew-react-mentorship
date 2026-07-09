@@ -23,7 +23,7 @@ import {
   type UpdateQuestionPayload,
 } from '../lib/websocket/messages';
 import type { ServerMessage } from '../lib/websocket/messages';
-import { logout } from '../services/auth';
+import { logout } from '../services/authStorage';
 import { useGetCategoriesQuery } from '../state/categories/categories.api';
 import { selectCategories } from '../state/categories/categories.selectors';
 import { useGetPlayersQuery, usePatchPlayerMutation } from '../state/players/players.api';

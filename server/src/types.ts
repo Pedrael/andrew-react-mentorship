@@ -1,7 +1,4 @@
-/**
- * Mirrors the client shapes in `client/src/context/GameContext.tsx`
- * and `client/src/state/GameReducer.tsx`.
- */
+/** Mirrors the client Redux state shapes under `client/src/state/`. */
 export type Player = {
   id: string;
   name: string;
@@ -19,6 +16,7 @@ export type Question = {
 };
 
 export type Category = {
+  id: string;
   title: string;
   questions: Question[];
 };

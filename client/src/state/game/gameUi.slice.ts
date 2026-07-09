@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-export const buildQuestionKey = (categoryTitle: string, price: number) =>
-  `${categoryTitle}::${price}`;
+export const buildQuestionKey = (categoryId: string, price: number) =>
+  `${categoryId}::${price}`;
 
 export type GameUiState = {
   selectedPlayerId: string | null;

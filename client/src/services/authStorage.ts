@@ -11,3 +11,6 @@ export function removeAccessToken(): void {
 export function isAuthenticated(): boolean {
   return getAccessToken() !== null;
 }
+export function logout(): void {
+  removeAccessToken();
+}

@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
 import type { CategoriesFile, Category, Player } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -70,7 +71,17 @@ export async function readCategoriesRoot(): Promise<CategoriesFile> {
   if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as CategoriesFile).categories)) {
     throw new Error('categories.json must be an object with a "categories" array');
   }
-  return parsed as CategoriesFile;
+  const root = parsed as CategoriesFile;
+  // Self-migration: backfill stable ids for any category persisted before ids existed.
+  let changed = false;
+  for (const category of root.categories) {
+    if (typeof category.id !== 'string' || !category.id) {
+      category.id = randomUUID();
+      changed = true;
+    }
+  }
+  if (changed) await writeCategoriesRoot(root);
+  return root;
 }
 
 export async function writeCategoriesRoot(root: CategoriesFile): Promise<void> {

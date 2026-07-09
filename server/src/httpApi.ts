@@ -84,8 +84,9 @@ function isQuestion(value: unknown): value is Question {
   return true;
 }
 
-function isCategory(value: unknown): value is Category {
+function isCategory(value: unknown): value is Omit<Category, 'id'> & { id?: string } {
   if (!isRecord(value) || typeof value.title !== 'string') return false;
+  if (value.id !== undefined && typeof value.id !== 'string') return false;
   if (!Array.isArray(value.questions)) return false;
   return value.questions.every(isQuestion);
 }
@@ -374,6 +375,7 @@ export async function handleHttpApi(
 
       const newCategory = await editCategories(async (root) => {
         const cat: Category = {
+          id: randomUUID(),
           title: title ?? `Category ${root.categories.length + 1}`,
           questions: questions ?? defaultJeopardyQuestions(),
         };
@@ -396,10 +398,15 @@ export async function handleHttpApi(
         badRequest(res, 'Body must be a full Category { title, questions[] }');
         return true;
       }
+      let stored: Category | null = null;
       try {
-        await editCategories(async (root) => {
-          if (!root.categories[index]) throw new Error('__NOT_FOUND__');
-          root.categories[index] = body;
+        stored = await editCategories(async (root) => {
+          const existing = root.categories[index];
+          if (!existing) throw new Error('__NOT_FOUND__');
+          // Preserve the stable id; the client addresses categories by index.
+          const next: Category = { ...body, id: existing.id };
+          root.categories[index] = next;
+          return next;
         });
       } catch (e) {
         if (e instanceof Error && e.message === '__NOT_FOUND__') {
@@ -408,7 +415,7 @@ export async function handleHttpApi(
         }
         throw e;
       }
-      sendJson(res, 200, body);
+      sendJson(res, 200, stored);
       return true;
     }
 
@@ -435,7 +442,7 @@ export async function handleHttpApi(
           if (Array.isArray(body.questions) && body.questions.every(isQuestion)) {
             questions = body.questions as Question[];
           }
-          const out: Category = { title, questions };
+          const out: Category = { id: existing.id, title, questions };
           root.categories[index] = out;
           return out;
         });

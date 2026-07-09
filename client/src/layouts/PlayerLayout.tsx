@@ -4,7 +4,7 @@ import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import JeopardyTable from '../components/jeopardy-table/JeopardyTable';
 import QuestionDialog from '../components/question-dialog/QuestionDialog';
 import type { QuestionDialogData } from '../components/question-dialog/QuestionDialog';
-import { logout } from '../services/auth';
+import { logout } from '../services/authStorage';
 import { useWebSocket } from '../lib/websocket/useWebSocket';
 import {
   OPEN_QUESTION_EVENT,

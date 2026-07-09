@@ -52,27 +52,33 @@ export default function JeopardyTable({
   const [patchCategory] = usePatchCategoryMutation();
   const [patchCategoryQuestion] = usePatchCategoryQuestionMutation();
 
-  const [selectedQuestion, setSelectedQuestion] = React.useState<QuestionDialogData | null>(null);
+  const [selected, setSelected] = React.useState<{
+    data: QuestionDialogData;
+    categoryIndex: number;
+    price: number;
+  } | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
   const dialogCloseTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const questionSaverRef = React.useRef<
-    ((data: { question: string; answer: string; image?: string }) => void) | null
-  >(null);
-  const questionLiveEditRef = React.useRef<
-    ((data: { question: string; answer: string; image?: string }) => void) | null
-  >(null);
 
+  // Save is only wired for the admin board (see the QuestionDialog props below).
   const handleQuestionSave = React.useCallback(
     (data: { question: string; answer: string; image?: string }) => {
-      questionSaverRef.current?.(data);
+      if (!selected) return;
+      void patchCategoryQuestion({
+        index: selected.categoryIndex,
+        price: selected.price,
+        payload: { question: data.question, answer: data.answer, image: data.image ?? null },
+      });
     },
-    [],
+    [selected, patchCategoryQuestion],
   );
+
   const handleQuestionLiveEdit = React.useCallback(
     (data: { question: string; answer: string; image?: string }) => {
-      questionLiveEditRef.current?.(data);
+      if (!selected) return;
+      onQuestionLiveEdit?.({ ...selected.data, ...data });
     },
-    [],
+    [selected, onQuestionLiveEdit],
   );
 
   const prices = React.useMemo(() => {
@@ -94,7 +100,8 @@ export default function JeopardyTable({
     for (const category of categoriesData) {
       for (const q of category.questions) {
         if (!q.question) continue;
-        map.set(buildQuestionKey(category.title, q.price), {
+        map.set(buildQuestionKey(category.id, q.price), {
+          categoryId: category.id,
           category: category.title,
           price: q.price,
           question: q.question,
@@ -107,34 +114,7 @@ export default function JeopardyTable({
   }, [categoriesData]);
 
   const openDialog = (cellData: QuestionDialogData, categoryIndex: number, price: number) => {
-    questionSaverRef.current = (data) => {
-      if (isAdmin) {
-        void patchCategoryQuestion({
-          index: categoryIndex,
-          price,
-          payload: {
-            question: data.question,
-            answer: data.answer,
-            image: data.image ?? null,
-          },
-        });
-      } else {
-        dispatch(
-          categoriesApi.util.updateQueryData('getCategories', undefined, (draft) => {
-            const category = draft[categoryIndex];
-            if (!category) return;
-            const questionIndex = category.questions.findIndex((question) => question.price === price);
-            if (questionIndex === -1) {
-              category.questions.push({ price, ...data, isAnswered: false });
-            } else {
-              Object.assign(category.questions[questionIndex], data);
-            }
-          }),
-        );
-      }
-    };
-    questionLiveEditRef.current = (data) => onQuestionLiveEdit?.({ ...cellData, ...data });
-    setSelectedQuestion(cellData);
+    setSelected({ data: cellData, categoryIndex, price });
     setIsDialogOpen(true);
     if (isAdmin) onQuestionOpen?.(cellData);
   };
@@ -146,10 +126,9 @@ export default function JeopardyTable({
       clearTimeout(dialogCloseTimeoutRef.current);
     }
 
+    // Keep the question mounted briefly so the dialog can animate out.
     dialogCloseTimeoutRef.current = setTimeout(() => {
-      setSelectedQuestion(null);
-      questionSaverRef.current = null;
-      questionLiveEditRef.current = null;
+      setSelected(null);
       dialogCloseTimeoutRef.current = null;
     }, 100);
 
@@ -218,7 +197,7 @@ export default function JeopardyTable({
                 </TableCell>
 
                 {prices.map((price) => {
-                  const questionKey = buildQuestionKey(cat.title, price);
+                  const questionKey = buildQuestionKey(cat.id, price);
                   const cellQuestion = questionMap.get(questionKey);
                   const isAnsweredCorrectly = answeredQuestionKeys.has(questionKey);
                   const isAnsweredFailed = failedQuestionKeys.has(questionKey);
@@ -256,6 +235,7 @@ export default function JeopardyTable({
                         if (isClosed) return;
                         if (!isAdmin && hasNoQuestion) return;
                         const dialogData: QuestionDialogData = cellQuestion ?? {
+                          categoryId: cat.id,
                           category: cat.title,
                           price,
                           question: '',
@@ -301,7 +281,7 @@ export default function JeopardyTable({
       )}
 
       <QuestionDialog
-        question={selectedQuestion}
+        question={selected?.data ?? null}
         isAdmin={isAdmin}
         isOpen={isDialogOpen}
         onClose={onDialogClose}

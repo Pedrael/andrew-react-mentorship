@@ -29,6 +29,7 @@ import { usePatchPlayerMutation } from '../../state/players/players.api';
 import type { Player } from '../../state/players/players.types';
 
 export type QuestionDialogData = {
+  categoryId: string;
   category: string;
   question: string;
   price: number;
@@ -87,7 +88,7 @@ export default function QuestionDialog({
 
   const selectedPlayer = players.find((p) => p.isSelected);
   const scoreDelta = question?.price ?? 0;
-  const questionKey = question ? buildQuestionKey(question.category, question.price) : null;
+  const questionKey = question ? buildQuestionKey(question.categoryId, question.price) : null;
   const isRevealingAnswer = Boolean(questionKey && revealedQuestionKey === questionKey);
   const previousQuestionKeyRef = useRef<string | null>(null);
 
@@ -108,8 +109,8 @@ export default function QuestionDialog({
 
   const currentBidder = activeBidders.find((p) => !auctionWrongIds.has(p.id)) ?? null;
 
-  const findCategoryIndex = (categoryTitle: string) =>
-    categories.findIndex((category) => category.title === categoryTitle);
+  const findCategoryIndex = (categoryId: string) =>
+    categories.findIndex((category) => category.id === categoryId);
 
   const closeDialog = () => {
     if (isAdmin && onQuestionSave) {
@@ -142,7 +143,7 @@ export default function QuestionDialog({
     if (!question || !questionKey) return;
     const outcome = pointsWinner && points && points > 0 ? 'correct' : 'failed';
     dispatch(revealQuestionAnswer(questionKey));
-    const categoryIndex = findCategoryIndex(question.category);
+    const categoryIndex = findCategoryIndex(question.categoryId);
 
     if (outcome === 'correct') {
       if (isAdmin) {

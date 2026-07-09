@@ -27,6 +27,7 @@ export type ServerMessage = EventMessage | SystemMessage;
 export const OPEN_QUESTION_EVENT = 'open_question';
 
 export interface OpenQuestionPayload {
+  categoryId: string;
   category: string;
   question: string;
   price: number;
@@ -64,6 +65,7 @@ export type PlayersUpdatePayload = PlayerScore[];
 export const UPDATE_QUESTION_EVENT = 'update_question';
 
 export interface UpdateQuestionPayload {
+  categoryId: string;
   category: string;
   price: number;
   question: string;
