@@ -14,11 +14,13 @@ import {
   CLOSE_QUESTION_EVENT,
   REVEAL_ANSWER_EVENT,
   MARK_AUCTIONED_EVENT,
+  AUCTION_UPDATE_EVENT,
   PLAYERS_UPDATE_EVENT,
   UPDATE_QUESTION_EVENT,
   SYNC_CATEGORIES_EVENT,
   type RevealAnswerPayload,
   type MarkAuctionedPayload,
+  type AuctionUpdateMessage,
   type PlayersUpdatePayload,
   type UpdateQuestionPayload,
 } from '../lib/websocket/messages';
@@ -28,6 +30,7 @@ import { useGetCategoriesQuery } from '../state/categories/categories.api';
 import { selectCategories } from '../state/categories/categories.selectors';
 import { useGetPlayersQuery, usePatchPlayerMutation } from '../state/players/players.api';
 import { selectPlayers, selectPlayersData } from '../state/players/players.selectors';
+import { selectAuctionState } from '../state/game/gameUi.selectors';
 import { useAppSelector } from '../state/hooks';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080';
@@ -46,6 +49,7 @@ export default function AdminLayout() {
   const players = useAppSelector(selectPlayers);
   const playersData = useAppSelector(selectPlayersData);
   const categories = useAppSelector(selectCategories);
+  const auctionState = useAppSelector(selectAuctionState);
   const resendStateRef = useRef<() => void>(() => {});
   const handleServerMessage = useCallback((msg: ServerMessage) => {
     if (msg.type === 'system' && msg.event === 'peer_joined' && msg.role === 'player') {
@@ -87,8 +91,9 @@ export default function AdminLayout() {
         PLAYERS_UPDATE_EVENT,
         players.map(({ id, name, score }) => ({ id, name, score })),
       );
+      send<AuctionUpdateMessage>(AUCTION_UPDATE_EVENT, auctionState);
     };
-  }, [categories, players, send]);
+  }, [auctionState, categories, players, send]);
 
   useEffect(() => {
     if (status !== 'open') return;
@@ -126,6 +131,13 @@ export default function AdminLayout() {
   const handleMarkAuctioned = useCallback(
     (questionKey: string) => {
       send<MarkAuctionedPayload>(MARK_AUCTIONED_EVENT, { questionKey });
+    },
+    [send],
+  );
+
+  const handleAuctionUpdate = useCallback(
+    (auction: AuctionUpdateMessage) => {
+      send<AuctionUpdateMessage>(AUCTION_UPDATE_EVENT, auction);
     },
     [send],
   );
@@ -170,40 +182,53 @@ export default function AdminLayout() {
   }
 
   return (
-    <section style={{ padding: 16 }}>
-      <JeopardyTable
-        isAdmin={true}
-        onQuestionOpen={handleQuestionOpen}
-        onQuestionClose={handleQuestionClose}
-        onAnswerReveal={handleAnswerReveal}
-        onMarkAuctioned={handleMarkAuctioned}
-        onQuestionLiveEdit={handleQuestionLiveEdit}
-      />
-      <PlayerManagementForm />
+    <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', p: 2 }}>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <JeopardyTable
+          isAdmin={true}
+          onQuestionOpen={handleQuestionOpen}
+          onQuestionClose={handleQuestionClose}
+          onAnswerReveal={handleAnswerReveal}
+          onMarkAuctioned={handleMarkAuctioned}
+          onAuctionUpdate={handleAuctionUpdate}
+          onQuestionLiveEdit={handleQuestionLiveEdit}
+        />
+      </Box>
       <Box
         sx={{
-          mt: 4,
-          pt: 2,
-          borderTop: '1px dashed',
-          borderColor: 'divider',
+          width: 'fit-content',
+          flexShrink: 0,
           display: 'flex',
-          gap: 1,
+          flexDirection: 'column',
+          gap: 2,
         }}
       >
-        <Button variant="outlined" color="warning" size="small" onClick={() => void handleResetScores()}>
-          Reset scores
-        </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={() => {
-            logout();
-            navigate('/login', { replace: true });
+        <PlayerManagementForm />
+        <Box
+          sx={{
+            pt: 2,
+            borderTop: '1px dashed',
+            borderColor: 'divider',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
           }}
         >
-          Sign out
-        </Button>
+          <Button variant="outlined" color="warning" size="small" onClick={() => void handleResetScores()}>
+            Reset scores
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              logout();
+              navigate('/login', { replace: true });
+            }}
+          >
+            Sign out
+          </Button>
+        </Box>
       </Box>
-    </section>
+    </Box>
   );
 }

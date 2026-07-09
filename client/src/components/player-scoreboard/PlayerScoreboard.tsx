@@ -8,7 +8,7 @@ export default function PlayerScoreboard() {
   const sorted = [...players].sort((a, b) => b.score - a.score);
 
   return (
-    <Box sx={{ mt: 3, maxWidth: 480 }}>
+    <Box sx={{ width: 'fit-content' }}>
       <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
         Scoreboard
       </Typography>

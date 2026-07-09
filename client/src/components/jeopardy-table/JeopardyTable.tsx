@@ -25,6 +25,7 @@ import {
   usePatchCategoryMutation,
   usePatchCategoryQuestionMutation,
 } from '../../state/categories/categories.api';
+import type { AuctionState } from '../../state/game/gameUi.slice';
 
 type JeopardyTableProps = {
   isAdmin: boolean;
@@ -32,6 +33,7 @@ type JeopardyTableProps = {
   onQuestionClose?: () => void;
   onAnswerReveal?: (questionKey: string, outcome: 'correct' | 'failed') => void;
   onMarkAuctioned?: (questionKey: string) => void;
+  onAuctionUpdate?: (auction: AuctionState | null) => void;
   onQuestionLiveEdit?: (data: QuestionDialogData) => void;
 };
 
@@ -41,6 +43,7 @@ export default function JeopardyTable({
   onQuestionClose,
   onAnswerReveal,
   onMarkAuctioned,
+  onAuctionUpdate,
   onQuestionLiveEdit,
 }: JeopardyTableProps) {
   const dispatch = useAppDispatch();
@@ -161,7 +164,7 @@ export default function JeopardyTable({
 
   return (
     <>
-      <TableContainer component={Paper} sx={{ maxWidth: 1100 }}>
+      <TableContainer component={Paper} sx={{ width: '100%' }}>
         <Table aria-label="Jeopardy board">
           <TableHead>
             <TableRow>
@@ -266,7 +269,7 @@ export default function JeopardyTable({
                         <Box
                           component="span"
                           sx={{
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: 300,
                             color: 'text.disabled',
                             lineHeight: 1,
@@ -305,6 +308,7 @@ export default function JeopardyTable({
         onClose={onDialogClose}
         onAnswerReveal={onAnswerReveal}
         onMarkAuctioned={onMarkAuctioned}
+        onAuctionUpdate={onAuctionUpdate}
         onQuestionSave={isAdmin ? handleQuestionSave : undefined}
         onLiveEdit={isAdmin ? handleQuestionLiveEdit : undefined}
         disableBackdropClose

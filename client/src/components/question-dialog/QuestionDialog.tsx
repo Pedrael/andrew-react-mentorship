@@ -22,7 +22,10 @@ import {
   markQuestionFailed,
   revealQuestionAnswer,
   selectNextPlayer,
+  setAuctionState,
+  type AuctionState,
 } from '../../state/game/gameUi.slice';
+import { selectAuctionState } from '../../state/game/gameUi.selectors';
 import { usePatchCategoryQuestionMutation } from '../../state/categories/categories.api';
 import { selectCategories } from '../../state/categories/categories.selectors';
 import { usePatchPlayerMutation } from '../../state/players/players.api';
@@ -46,9 +49,12 @@ type QuestionDialogProps = {
   showAnswer?: boolean;
   onAnswerReveal?: (questionKey: string, outcome: 'correct' | 'failed') => void;
   onMarkAuctioned?: (questionKey: string) => void;
+  onAuctionUpdate?: (auction: AuctionState | null) => void;
   onQuestionSave?: (data: { question: string; answer: string; image?: string }) => void;
   onLiveEdit?: (data: { question: string; answer: string; image?: string }) => void;
 };
+
+const ADMIN_SCORE_PENALTY = 100;
 
 export default function QuestionDialog({
   question,
@@ -59,6 +65,7 @@ export default function QuestionDialog({
   showAnswer = false,
   onAnswerReveal,
   onMarkAuctioned,
+  onAuctionUpdate,
   onQuestionSave,
   onLiveEdit,
 }: QuestionDialogProps) {
@@ -68,14 +75,11 @@ export default function QuestionDialog({
   const categories = useAppSelector(selectCategories);
   const revealedQuestionKey = useAppSelector(selectRevealedQuestionKey);
   const gameWinner = useAppSelector(selectGameWinner);
+  const auction = useAppSelector(selectAuctionState);
   const [patchPlayer] = usePatchPlayerMutation();
   const [patchCategoryQuestion] = usePatchCategoryQuestionMutation();
 
   const [winner, setWinner] = useState<Player | null>(null);
-  const [auctionActive, setAuctionActive] = useState(false);
-  const [selectorPlayerId, setSelectorPlayerId] = useState<string | null>(null);
-  const [bids, setBids] = useState<Record<string, number>>({});
-  const [auctionWrongIds, setAuctionWrongIds] = useState<Set<string>>(() => new Set());
 
   const { control, reset, getValues, watch } = useForm<{
     question: string;
@@ -92,12 +96,21 @@ export default function QuestionDialog({
   const isRevealingAnswer = Boolean(questionKey && revealedQuestionKey === questionKey);
   const previousQuestionKeyRef = useRef<string | null>(null);
 
-  const selectorPlayer = selectorPlayerId
-    ? players.find((p) => p.id === selectorPlayerId)
-    : null;
-  const auctionPlayers = selectorPlayerId
-    ? players.filter((p) => p.id !== selectorPlayerId)
-    : [];
+  const auctionActive = Boolean(auction && questionKey && auction.questionKey === questionKey);
+  const selectorPlayerId = auctionActive ? auction!.selectorPlayerId : null;
+  const bids = auctionActive ? auction!.bids : {};
+  const auctionWrongIds = useMemo(
+    () => new Set(auctionActive ? auction!.wrongPlayerIds : []),
+    [auction, auctionActive],
+  );
+
+  const syncAuction = (next: AuctionState | null) => {
+    dispatch(setAuctionState(next));
+    onAuctionUpdate?.(next);
+  };
+
+  const selectorPlayer = selectorPlayerId ? players.find((p) => p.id === selectorPlayerId) : null;
+  const auctionPlayers = selectorPlayerId ? players.filter((p) => p.id !== selectorPlayerId) : [];
 
   const activeBidders = useMemo(
     () =>
@@ -133,10 +146,9 @@ export default function QuestionDialog({
   };
 
   const resetAuctionState = () => {
-    setAuctionActive(false);
-    setSelectorPlayerId(null);
-    setBids({});
-    setAuctionWrongIds(new Set());
+    if (isAdmin) {
+      syncAuction(null);
+    }
   };
 
   const finalizeQuestionAnswered = async (pointsWinner?: Player, points?: number) => {
@@ -176,6 +188,9 @@ export default function QuestionDialog({
     dispatch(selectNextPlayer(playerIds));
     onAnswerReveal?.(questionKey, outcome);
     setWinner(gameWinner);
+    if (isAdmin) {
+      syncAuction(null);
+    }
   };
 
   const handleCorrectAnswerStage1 = () => {
@@ -185,25 +200,37 @@ export default function QuestionDialog({
 
   const handleFailQuestion = () => {
     if (!selectedPlayer || !questionKey) return;
-    setAuctionActive(true);
-    setSelectorPlayerId(selectedPlayer.id);
+    if (isAdmin) {
+      void patchPlayer({
+        id: selectedPlayer.id,
+        payload: { score: selectedPlayer.score - ADMIN_SCORE_PENALTY },
+      });
+    }
+    syncAuction({
+      questionKey,
+      selectorPlayerId: selectedPlayer.id,
+      bids: {},
+      wrongPlayerIds: [],
+    });
     dispatch(markQuestionAuctioned(questionKey));
     onMarkAuctioned?.(questionKey);
   };
 
   const handleBidChange = (playerId: string, raw: string) => {
+    if (!auctionActive || !auction) return;
+
+    let nextBids: Record<string, number>;
     if (raw === '') {
-      setBids((prev) => {
-        const next = { ...prev };
-        delete next[playerId];
-        return next;
-      });
-      return;
+      nextBids = { ...auction.bids };
+      delete nextBids[playerId];
+    } else {
+      const parsed = Number.parseInt(raw, 10);
+      if (Number.isNaN(parsed)) return;
+      const clamped = Math.max(0, Math.min(scoreDelta, parsed));
+      nextBids = { ...auction.bids, [playerId]: clamped };
     }
-    const parsed = Number.parseInt(raw, 10);
-    if (Number.isNaN(parsed)) return;
-    const clamped = Math.max(0, Math.min(scoreDelta, parsed));
-    setBids((prev) => ({ ...prev, [playerId]: clamped }));
+
+    syncAuction({ ...auction, bids: nextBids });
   };
 
   const handleAuctionCorrect = (player: Player) => {
@@ -214,16 +241,16 @@ export default function QuestionDialog({
 
   const handleAuctionWrong = (player: Player) => {
     const bid = bids[player.id] ?? 0;
-    if (!questionKey || bid <= 0) return;
+    if (!questionKey || bid <= 0 || !auction) return;
     if (isAdmin) {
       void patchPlayer({
         id: player.id,
         payload: { score: player.score - bid },
       });
     }
-    const nextWrongIds = new Set(auctionWrongIds).add(player.id);
-    setAuctionWrongIds(nextWrongIds);
-    const stillCanAnswer = activeBidders.filter((p) => !nextWrongIds.has(p.id));
+    const nextWrongIds = [...auction.wrongPlayerIds, player.id];
+    syncAuction({ ...auction, wrongPlayerIds: nextWrongIds });
+    const stillCanAnswer = activeBidders.filter((p) => !nextWrongIds.includes(p.id));
     if (stillCanAnswer.length === 0) {
       void finalizeQuestionAnswered();
     }
@@ -333,43 +360,66 @@ export default function QuestionDialog({
           </Typography>
         )}
 
-        {isAdmin && auctionActive && (
+        {auctionActive && (
           <Box>
             <Typography variant="caption" color="warning.main" sx={{ display: 'block', mb: 1 }}>
-              ✗&nbsp;{selectorPlayer?.name ?? 'Player'} failed — auction open (max bid ${scoreDelta})
+              ✗&nbsp;{selectorPlayer?.name ?? 'Player'} failed — auction open (max bid ${scoreDelta}
+              )
             </Typography>
 
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-              Enter bids for participating players (highest bid answers first).
-            </Typography>
+            {isAdmin ? (
+              <>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  Enter bids for participating players (highest bid answers first).
+                </Typography>
 
-            {auctionPlayers.map((player) => {
-              const bid = bids[player.id] ?? '';
-              const answeredWrong = auctionWrongIds.has(player.id);
-              return (
-                <Box
-                  key={player.id}
-                  sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}
-                >
-                  <Typography variant="body2" sx={{ minWidth: 120 }}>
-                    {player.name}
-                    {answeredWrong ? ' (wrong)' : ''}
-                  </Typography>
-                  <TextField
-                    type="number"
-                    size="small"
-                    label="Bid"
-                    value={bid}
-                    onChange={(e) => handleBidChange(player.id, e.target.value)}
-                    disabled={answeredWrong || isRevealingAnswer}
-                    slotProps={{
-                      htmlInput: { min: 0, max: scoreDelta, step: 1 },
-                    }}
-                    sx={{ width: 100 }}
-                  />
-                </Box>
-              );
-            })}
+                {auctionPlayers.map((player) => {
+                  const bid = bids[player.id] ?? '';
+                  const answeredWrong = auctionWrongIds.has(player.id);
+                  return (
+                    <Box
+                      key={player.id}
+                      sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}
+                    >
+                      <Typography variant="body2" sx={{ minWidth: 120 }}>
+                        {player.name}
+                        {answeredWrong ? ' (wrong)' : ''}
+                      </Typography>
+                      <TextField
+                        type="number"
+                        size="small"
+                        label="Bid"
+                        value={bid}
+                        onChange={(e) => handleBidChange(player.id, e.target.value)}
+                        disabled={answeredWrong || isRevealingAnswer}
+                        slotProps={{
+                          htmlInput: { min: 0, max: scoreDelta, step: 1 },
+                        }}
+                        sx={{ width: 100 }}
+                      />
+                    </Box>
+                  );
+                })}
+              </>
+            ) : (
+              auctionPlayers
+                .filter((player) => (bids[player.id] ?? 0) > 0 || auctionWrongIds.has(player.id))
+                .map((player) => {
+                  const bid = bids[player.id] ?? 0;
+                  const answeredWrong = auctionWrongIds.has(player.id);
+                  return (
+                    <Box key={player.id} sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+                      <Typography variant="body2" sx={{ minWidth: 120 }}>
+                        {player.name}
+                        {answeredWrong ? ' (wrong)' : ''}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {bid > 0 ? `$${bid}` : '—'}
+                      </Typography>
+                    </Box>
+                  );
+                })
+            )}
 
             {activeBidders.length > 0 && (
               <>
@@ -403,7 +453,7 @@ export default function QuestionDialog({
               </>
             )}
 
-            {currentBidder && !isRevealingAnswer && (
+            {isAdmin && currentBidder && !isRevealingAnswer && (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 <Button
                   variant="outlined"
@@ -426,9 +476,13 @@ export default function QuestionDialog({
               </Box>
             )}
 
-            {activeBidders.length === 0 && !isRevealingAnswer && (
+            {isAdmin && activeBidders.length === 0 && !isRevealingAnswer && (
               <Box sx={{ mt: 1 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 1 }}
+                >
                   No bids yet.
                 </Typography>
                 <Button
@@ -440,6 +494,12 @@ export default function QuestionDialog({
                   End question (no bids)
                 </Button>
               </Box>
+            )}
+
+            {!isAdmin && activeBidders.length === 0 && !isRevealingAnswer && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                No bids yet.
+              </Typography>
             )}
           </Box>
         )}

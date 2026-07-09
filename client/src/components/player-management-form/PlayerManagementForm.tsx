@@ -57,7 +57,7 @@ export default function PlayerManagementForm() {
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit(onAddPlayer)} noValidate autoComplete="off">
+    <Box component="form" onSubmit={handleSubmit(onAddPlayer)} noValidate autoComplete="off" sx={{ width: 'fit-content' }}>
       <FormControl fullWidth>
         <FormLabel id="player-management-label">Players</FormLabel>
         <RadioGroup

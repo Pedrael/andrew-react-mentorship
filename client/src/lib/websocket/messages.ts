@@ -52,6 +52,17 @@ export interface MarkAuctionedPayload {
   questionKey: string;
 }
 
+export const AUCTION_UPDATE_EVENT = 'auction_update';
+
+export interface AuctionUpdatePayload {
+  questionKey: string;
+  selectorPlayerId: string;
+  bids: Record<string, number>;
+  wrongPlayerIds: string[];
+}
+
+export type AuctionUpdateMessage = AuctionUpdatePayload | null;
+
 export const PLAYERS_UPDATE_EVENT = 'players_update';
 
 export interface PlayerScore {

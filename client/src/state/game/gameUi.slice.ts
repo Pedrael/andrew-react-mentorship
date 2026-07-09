@@ -3,12 +3,20 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 export const buildQuestionKey = (categoryId: string, price: number) =>
   `${categoryId}::${price}`;
 
+export type AuctionState = {
+  questionKey: string;
+  selectorPlayerId: string;
+  bids: Record<string, number>;
+  wrongPlayerIds: string[];
+};
+
 export type GameUiState = {
   selectedPlayerId: string | null;
   answeredQuestionKeys: Set<string>;
   failedQuestionKeys: Set<string>;
   auctionedQuestionKeys: Set<string>;
   revealedQuestionKey: string | null;
+  auction: AuctionState | null;
 };
 
 const initialState: GameUiState = {
@@ -17,6 +25,7 @@ const initialState: GameUiState = {
   failedQuestionKeys: new Set<string>(),
   auctionedQuestionKeys: new Set<string>(),
   revealedQuestionKey: null,
+  auction: null,
 };
 
 const gameUiSlice = createSlice({
@@ -44,6 +53,7 @@ const gameUiSlice = createSlice({
       if (!alreadyAnswered) state.answeredQuestionKeys.add(questionKey);
       state.failedQuestionKeys.delete(questionKey);
       if (wasAuctioned) state.auctionedQuestionKeys.delete(questionKey);
+      if (state.auction?.questionKey === questionKey) state.auction = null;
     },
     markQuestionFailed: (state, action: PayloadAction<string>) => {
       const questionKey = action.payload;
@@ -51,6 +61,7 @@ const gameUiSlice = createSlice({
       state.failedQuestionKeys.add(questionKey);
       state.answeredQuestionKeys.delete(questionKey);
       state.auctionedQuestionKeys.delete(questionKey);
+      if (state.auction?.questionKey === questionKey) state.auction = null;
     },
     markQuestionAuctioned: (state, action: PayloadAction<string>) => {
       const questionKey = action.payload;
@@ -63,6 +74,12 @@ const gameUiSlice = createSlice({
     },
     clearRevealedQuestionAnswer: (state) => {
       state.revealedQuestionKey = null;
+    },
+    setAuctionState: (state, action: PayloadAction<AuctionState | null>) => {
+      state.auction = action.payload;
+    },
+    clearAuctionState: (state) => {
+      state.auction = null;
     },
     clearSelectedPlayerIfDeleted: (state, action: PayloadAction<string>) => {
       if (state.selectedPlayerId === action.payload) {
@@ -81,6 +98,8 @@ export const {
   revealQuestionAnswer,
   clearRevealedQuestionAnswer,
   clearSelectedPlayerIfDeleted,
+  setAuctionState,
+  clearAuctionState,
 } = gameUiSlice.actions;
 
 export default gameUiSlice.reducer;
