@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import Box from '@mui/material/Box';
 import JeopardyTable from '../components/jeopardy-table/JeopardyTable';
-import QuestionDialog from '../components/question-dialog/QuestionDialog';
-import type { QuestionDialogData } from '../components/question-dialog/QuestionDialog';
+import QuestionDialogContainer from '../components/question-dialog/QuestionDialogContainer';
+import type { QuestionDialogData } from '../components/question-dialog/types';
 import { logout } from '../services/authStorage';
 import { useWebSocket } from '../lib/websocket/useWebSocket';
 import {
@@ -127,7 +127,7 @@ export default function PlayerLayout() {
       <Box sx={{ width: 'fit-content', flexShrink: 0 }}>
         <PlayerScoreboard />
       </Box>
-      <QuestionDialog
+      <QuestionDialogContainer
         question={openedQuestion}
         isAdmin={false}
         isOpen={isDialogOpen}

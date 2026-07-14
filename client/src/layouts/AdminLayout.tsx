@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import Alert from '@mui/material/Alert';
@@ -7,7 +7,8 @@ import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import JeopardyTable from '../components/jeopardy-table/JeopardyTable';
 import PlayerManagementForm from '../components/player-management-form/PlayerManagementForm';
-import type { QuestionDialogData } from '../components/question-dialog/QuestionDialog';
+import QuestionDialogContainer from '../components/question-dialog/QuestionDialogContainer';
+import type { QuestionDialogData } from '../components/question-dialog/types';
 import { useWebSocket } from '../lib/websocket/useWebSocket';
 import {
   OPEN_QUESTION_EVENT,
@@ -51,6 +52,11 @@ export default function AdminLayout() {
   const categories = useAppSelector(selectCategories);
   const auctionState = useAppSelector(selectAuctionState);
   const resendStateRef = useRef<() => void>(() => {});
+
+  const [openedQuestion, setOpenedQuestion] = useState<QuestionDialogData | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const dialogCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleServerMessage = useCallback((msg: ServerMessage) => {
     if (msg.type === 'system' && msg.event === 'peer_joined' && msg.role === 'player') {
       resendStateRef.current();
@@ -110,8 +116,22 @@ export default function AdminLayout() {
     send(PLAYERS_UPDATE_EVENT, payload);
   }, [players, status, send]);
 
+  useEffect(() => {
+    return () => {
+      if (dialogCloseTimeoutRef.current) {
+        clearTimeout(dialogCloseTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleQuestionOpen = useCallback(
     (question: QuestionDialogData) => {
+      if (dialogCloseTimeoutRef.current) {
+        clearTimeout(dialogCloseTimeoutRef.current);
+        dialogCloseTimeoutRef.current = null;
+      }
+      setOpenedQuestion(question);
+      setIsDialogOpen(true);
       send(OPEN_QUESTION_EVENT, question);
     },
     [send],
@@ -119,6 +139,16 @@ export default function AdminLayout() {
 
   const handleQuestionClose = useCallback(() => {
     send(CLOSE_QUESTION_EVENT, null);
+    setIsDialogOpen(false);
+
+    if (dialogCloseTimeoutRef.current) {
+      clearTimeout(dialogCloseTimeoutRef.current);
+    }
+    // Keep the question mounted briefly so the dialog can animate out.
+    dialogCloseTimeoutRef.current = setTimeout(() => {
+      setOpenedQuestion(null);
+      dialogCloseTimeoutRef.current = null;
+    }, 100);
   }, [send]);
 
   const handleAnswerReveal = useCallback(
@@ -184,15 +214,7 @@ export default function AdminLayout() {
   return (
     <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', p: 2 }}>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <JeopardyTable
-          isAdmin={true}
-          onQuestionOpen={handleQuestionOpen}
-          onQuestionClose={handleQuestionClose}
-          onAnswerReveal={handleAnswerReveal}
-          onMarkAuctioned={handleMarkAuctioned}
-          onAuctionUpdate={handleAuctionUpdate}
-          onQuestionLiveEdit={handleQuestionLiveEdit}
-        />
+        <JeopardyTable isAdmin={true} onQuestionOpen={handleQuestionOpen} />
       </Box>
       <Box
         sx={{
@@ -229,6 +251,17 @@ export default function AdminLayout() {
           </Button>
         </Box>
       </Box>
+      <QuestionDialogContainer
+        question={openedQuestion}
+        isAdmin
+        isOpen={isDialogOpen}
+        onClose={handleQuestionClose}
+        onAnswerReveal={handleAnswerReveal}
+        onMarkAuctioned={handleMarkAuctioned}
+        onAuctionUpdate={handleAuctionUpdate}
+        onLiveEdit={handleQuestionLiveEdit}
+        disableBackdropClose
+      />
     </Box>
   );
 }

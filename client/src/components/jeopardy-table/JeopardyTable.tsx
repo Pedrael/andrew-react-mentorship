@@ -9,8 +9,7 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import QuestionDialog from '../question-dialog/QuestionDialog';
-import type { QuestionDialogData } from '../question-dialog/QuestionDialog';
+import type { QuestionDialogData } from '../question-dialog/types';
 import { buildQuestionKey } from '../../state/game/gameUi.slice';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { selectCategories } from '../../state/categories/categories.selectors';
@@ -23,29 +22,14 @@ import {
   categoriesApi,
   useCreateCategoryMutation,
   usePatchCategoryMutation,
-  usePatchCategoryQuestionMutation,
 } from '../../state/categories/categories.api';
-import type { AuctionState } from '../../state/game/gameUi.slice';
 
 type JeopardyTableProps = {
   isAdmin: boolean;
   onQuestionOpen?: (question: QuestionDialogData) => void;
-  onQuestionClose?: () => void;
-  onAnswerReveal?: (questionKey: string, outcome: 'correct' | 'failed') => void;
-  onMarkAuctioned?: (questionKey: string) => void;
-  onAuctionUpdate?: (auction: AuctionState | null) => void;
-  onQuestionLiveEdit?: (data: QuestionDialogData) => void;
 };
 
-export default function JeopardyTable({
-  isAdmin = false,
-  onQuestionOpen,
-  onQuestionClose,
-  onAnswerReveal,
-  onMarkAuctioned,
-  onAuctionUpdate,
-  onQuestionLiveEdit,
-}: JeopardyTableProps) {
+export default function JeopardyTable({ isAdmin = false, onQuestionOpen }: JeopardyTableProps) {
   const dispatch = useAppDispatch();
   const categoriesData = useAppSelector(selectCategories);
   const answeredQuestionKeys = useAppSelector(selectAnsweredKeys);
@@ -53,36 +37,6 @@ export default function JeopardyTable({
   const auctionedQuestionKeys = useAppSelector(selectAuctionedKeys);
   const [createCategory] = useCreateCategoryMutation();
   const [patchCategory] = usePatchCategoryMutation();
-  const [patchCategoryQuestion] = usePatchCategoryQuestionMutation();
-
-  const [selected, setSelected] = React.useState<{
-    data: QuestionDialogData;
-    categoryIndex: number;
-    price: number;
-  } | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = React.useState<boolean>(false);
-  const dialogCloseTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Save is only wired for the admin board (see the QuestionDialog props below).
-  const handleQuestionSave = React.useCallback(
-    (data: { question: string; answer: string; image?: string }) => {
-      if (!selected) return;
-      void patchCategoryQuestion({
-        index: selected.categoryIndex,
-        price: selected.price,
-        payload: { question: data.question, answer: data.answer, image: data.image ?? null },
-      });
-    },
-    [selected, patchCategoryQuestion],
-  );
-
-  const handleQuestionLiveEdit = React.useCallback(
-    (data: { question: string; answer: string; image?: string }) => {
-      if (!selected) return;
-      onQuestionLiveEdit?.({ ...selected.data, ...data });
-    },
-    [selected, onQuestionLiveEdit],
-  );
 
   const prices = React.useMemo(() => {
     const seen = new Set<number>();
@@ -131,36 +85,6 @@ export default function JeopardyTable({
     }
     return { answered, failed };
   }, [categoriesData]);
-
-  const openDialog = (cellData: QuestionDialogData, categoryIndex: number, price: number) => {
-    setSelected({ data: cellData, categoryIndex, price });
-    setIsDialogOpen(true);
-    if (isAdmin) onQuestionOpen?.(cellData);
-  };
-
-  const onDialogClose = () => {
-    if (isAdmin) onQuestionClose?.();
-
-    if (dialogCloseTimeoutRef.current) {
-      clearTimeout(dialogCloseTimeoutRef.current);
-    }
-
-    // Keep the question mounted briefly so the dialog can animate out.
-    dialogCloseTimeoutRef.current = setTimeout(() => {
-      setSelected(null);
-      dialogCloseTimeoutRef.current = null;
-    }, 100);
-
-    setIsDialogOpen(false);
-  };
-
-  React.useEffect(() => {
-    return () => {
-      if (dialogCloseTimeoutRef.current) {
-        clearTimeout(dialogCloseTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return (
     <>
@@ -219,13 +143,17 @@ export default function JeopardyTable({
                   const questionKey = buildQuestionKey(cat.id, price);
                   const cellQuestion = questionMap.get(questionKey);
                   const isAnsweredCorrectly =
-                    answeredQuestionKeys.has(questionKey) || persistedOutcomes.answered.has(questionKey);
+                    answeredQuestionKeys.has(questionKey) ||
+                    persistedOutcomes.answered.has(questionKey);
                   const isAnsweredFailed =
-                    failedQuestionKeys.has(questionKey) || persistedOutcomes.failed.has(questionKey);
+                    failedQuestionKeys.has(questionKey) ||
+                    persistedOutcomes.failed.has(questionKey);
                   const isClosed = isAnsweredCorrectly || isAnsweredFailed;
                   const isAuctioned = auctionedQuestionKeys.has(questionKey);
                   const hasNoQuestion = !cellQuestion;
-                  const isDisabled = isClosed || (!isAdmin && hasNoQuestion);
+                  // Players: board is view-only (opens only via admin broadcast).
+                  // Admin: can open any non-closed cell (including empty to create).
+                  const isDisabled = isClosed || !isAdmin;
 
                   return (
                     <TableCell
@@ -253,8 +181,7 @@ export default function JeopardyTable({
                           }),
                       }}
                       onClick={() => {
-                        if (isClosed) return;
-                        if (!isAdmin && hasNoQuestion) return;
+                        if (isClosed || !isAdmin) return;
                         const dialogData: QuestionDialogData = cellQuestion ?? {
                           categoryId: cat.id,
                           category: cat.title,
@@ -262,7 +189,7 @@ export default function JeopardyTable({
                           question: '',
                           answer: '',
                         };
-                        openDialog(dialogData, catIdx, price);
+                        onQuestionOpen?.(dialogData);
                       }}
                     >
                       {isAdmin && hasNoQuestion && !isClosed ? (
@@ -300,19 +227,6 @@ export default function JeopardyTable({
           </Button>
         </Box>
       )}
-
-      <QuestionDialog
-        question={selected?.data ?? null}
-        isAdmin={isAdmin}
-        isOpen={isDialogOpen}
-        onClose={onDialogClose}
-        onAnswerReveal={onAnswerReveal}
-        onMarkAuctioned={onMarkAuctioned}
-        onAuctionUpdate={onAuctionUpdate}
-        onQuestionSave={isAdmin ? handleQuestionSave : undefined}
-        onLiveEdit={isAdmin ? handleQuestionLiveEdit : undefined}
-        disableBackdropClose
-      />
     </>
   );
 }
