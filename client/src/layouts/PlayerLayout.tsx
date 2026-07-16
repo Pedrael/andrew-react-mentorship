@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import Box from '@mui/material/Box';
+import GameHeader from '../components/game-header/GameHeader';
 import JeopardyTable from '../components/jeopardy-table/JeopardyTable';
 import QuestionDialogContainer from '../components/question-dialog/QuestionDialogContainer';
 import type { QuestionDialogData } from '../components/question-dialog/types';
@@ -120,12 +121,15 @@ export default function PlayerLayout() {
   useWebSocket({ url: WS_URL, role: 'player', onEvent: handleEvent });
 
   return (
-    <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', p: 2 }}>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <JeopardyTable isAdmin={false} />
-      </Box>
-      <Box sx={{ width: 'fit-content', flexShrink: 0 }}>
-        <PlayerScoreboard />
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <GameHeader status="Live game" />
+      <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start', p: 2.5, flex: 1 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <JeopardyTable isAdmin={false} />
+        </Box>
+        <Box sx={{ width: 'clamp(220px, 22vw, 320px)', flexShrink: 0 }}>
+          <PlayerScoreboard />
+        </Box>
       </Box>
       <QuestionDialogContainer
         question={openedQuestion}

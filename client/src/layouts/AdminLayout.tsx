@@ -5,6 +5,7 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
+import GameHeader from '../components/game-header/GameHeader';
 import JeopardyTable from '../components/jeopardy-table/JeopardyTable';
 import PlayerManagementForm from '../components/player-management-form/PlayerManagementForm';
 import QuestionDialogContainer from '../components/question-dialog/QuestionDialogContainer';
@@ -212,43 +213,47 @@ export default function AdminLayout() {
   }
 
   return (
-    <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', p: 2 }}>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <JeopardyTable isAdmin={true} onQuestionOpen={handleQuestionOpen} />
-      </Box>
-      <Box
-        sx={{
-          width: 'fit-content',
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-        }}
-      >
-        <PlayerManagementForm />
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <GameHeader status="Host view" />
+      <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start', p: 2.5, flex: 1 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <JeopardyTable isAdmin={true} onQuestionOpen={handleQuestionOpen} />
+        </Box>
         <Box
           sx={{
-            pt: 2,
-            borderTop: '1px dashed',
-            borderColor: 'divider',
+            width: 'clamp(240px, 22vw, 320px)',
+            flexShrink: 0,
             display: 'flex',
             flexDirection: 'column',
-            gap: 1,
+            gap: 2,
           }}
         >
-          <Button variant="outlined" color="warning" size="small" onClick={() => void handleResetScores()}>
-            Reset scores
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              logout();
-              navigate('/login', { replace: true });
+          <PlayerManagementForm />
+          <Box
+            sx={{
+              pt: 2,
+              borderTop: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 1,
             }}
           >
-            Sign out
-          </Button>
+            <Button color="error" size="small" onClick={() => void handleResetScores()}>
+              Reset scores
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                logout();
+                navigate('/login', { replace: true });
+              }}
+            >
+              Sign out
+            </Button>
+          </Box>
         </Box>
       </Box>
       <QuestionDialogContainer

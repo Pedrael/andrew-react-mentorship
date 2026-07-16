@@ -1,6 +1,7 @@
 import Button from '@mui/material/Button';
 import DialogActions from '@mui/material/DialogActions';
 import Typography from '@mui/material/Typography';
+import { tokens } from '../../theme';
 import type { QuestionDialogActionsProps } from './types';
 
 export default function QuestionDialogActions({
@@ -14,14 +15,13 @@ export default function QuestionDialogActions({
   onClose,
 }: QuestionDialogActionsProps) {
   return (
-    <DialogActions>
+    <DialogActions sx={{ px: 4, pb: 3, pt: 1, gap: 1 }}>
       {!auctionActive && (
         <>
           {!selectedPlayer && (
             <Typography
               variant="caption"
-              color="error"
-              sx={{ flex: 1, textAlign: 'left', px: 1 }}
+              sx={{ flex: 1, textAlign: 'left', color: tokens.accentBright }}
             >
               Select a player first.
             </Typography>
@@ -44,7 +44,7 @@ export default function QuestionDialogActions({
           </Button>
         </>
       )}
-      <Button onClick={onClose} variant="contained">
+      <Button onClick={onClose} variant="outlined">
         Close
       </Button>
     </DialogActions>

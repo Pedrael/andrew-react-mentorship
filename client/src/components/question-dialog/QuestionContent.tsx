@@ -1,5 +1,7 @@
+import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import ControllableTextField from '../controllable-text-field/ControllableTextField';
+import { displayFont, tokens } from '../../theme';
 import type { QuestionContentProps } from './types';
 
 export default function QuestionContent({
@@ -23,7 +25,21 @@ export default function QuestionContent({
           fullWidth
         />
       ) : (
-        <Typography variant="body1">{question?.question}</Typography>
+        <Typography
+          sx={{
+            fontFamily: displayFont,
+            fontWeight: 600,
+            fontSize: 'clamp(1.3rem, 2.4vw, 1.9rem)',
+            lineHeight: 1.45,
+            color: tokens.textPrimary,
+            textAlign: 'center',
+            maxWidth: '32ch',
+            mx: 'auto',
+            py: 3,
+          }}
+        >
+          {question?.question}
+        </Typography>
       )}
 
       {isAdmin && (
@@ -40,7 +56,13 @@ export default function QuestionContent({
           src={isAdmin ? editImage : question?.image}
           alt={`${question?.category} question`}
           loading="lazy"
-          style={{ maxWidth: '100%', borderRadius: 8 }}
+          style={{
+            maxWidth: '100%',
+            maxHeight: '40vh',
+            objectFit: 'contain',
+            borderRadius: 10,
+            alignSelf: 'center',
+          }}
         />
       )}
 
@@ -48,12 +70,43 @@ export default function QuestionContent({
         <ControllableTextField name="answer" control={control} label="Answer" fullWidth />
       ) : (
         (isRevealingAnswer || showAnswer) && (
-          <Typography variant="subtitle2">Answer: {question?.answer}</Typography>
+          <Box sx={{ textAlign: 'center', pb: 1 }}>
+            <Typography
+              component="span"
+              sx={{
+                display: 'block',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                color: tokens.textMuted,
+                mb: 0.5,
+              }}
+            >
+              Answer
+            </Typography>
+            <Typography
+              sx={{
+                fontFamily: displayFont,
+                fontWeight: 700,
+                fontSize: '1.15rem',
+                color: tokens.textPrimary,
+              }}
+            >
+              {question?.answer}
+            </Typography>
+          </Box>
         )
       )}
 
       {winner && (
-        <Typography variant="body1" sx={{ color: 'success.main', fontWeight: 700 }}>
+        <Typography
+          sx={{
+            textAlign: isAdmin ? 'left' : 'center',
+            fontWeight: 700,
+            color: tokens.green,
+          }}
+        >
           Winner: {winner.name}
         </Typography>
       )}

@@ -10,6 +10,7 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import type { QuestionDialogData } from '../question-dialog/types';
+import { displayFont, tokens } from '../../theme';
 import { buildQuestionKey } from '../../state/game/gameUi.slice';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { selectCategories } from '../../state/categories/categories.selectors';
@@ -92,9 +93,9 @@ export default function JeopardyTable({ isAdmin = false, onQuestionOpen }: Jeopa
         <Table aria-label="Jeopardy board">
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: 180, fontWeight: 700 }}>Categories</TableCell>
+              <TableCell sx={{ width: 200 }}>Categories</TableCell>
               {prices.map((price) => (
-                <TableCell key={price} align="center" sx={{ fontWeight: 700 }}>
+                <TableCell key={price} align="center">
                   ${price}
                 </TableCell>
               ))}
@@ -104,17 +105,32 @@ export default function JeopardyTable({ isAdmin = false, onQuestionOpen }: Jeopa
           <TableBody>
             {categoriesData.map((cat, catIdx) => (
               <TableRow key={catIdx}>
-                <TableCell sx={{ fontWeight: 700, py: 0.5 }}>
+                <TableCell
+                  sx={{
+                    fontFamily: displayFont,
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    color: tokens.textPrimary,
+                    backgroundColor: tokens.sunken,
+                    textAlign: 'left',
+                    px: 1.5,
+                    py: 0.5,
+                  }}
+                >
                   {isAdmin ? (
                     <InputBase
                       value={cat.title}
                       onChange={(e) => {
                         const newTitle = e.target.value;
                         dispatch(
-                          categoriesApi.util.updateQueryData('getCategories', undefined, (draft) => {
-                            const category = draft[catIdx];
-                            if (category) category.title = newTitle;
-                          }),
+                          categoriesApi.util.updateQueryData(
+                            'getCategories',
+                            undefined,
+                            (draft) => {
+                              const category = draft[catIdx];
+                              if (category) category.title = newTitle;
+                            },
+                          ),
                         );
                       }}
                       onBlur={(e) => {
@@ -122,15 +138,22 @@ export default function JeopardyTable({ isAdmin = false, onQuestionOpen }: Jeopa
                       }}
                       inputProps={{ 'aria-label': 'category name' }}
                       sx={{
+                        fontFamily: displayFont,
                         fontWeight: 700,
                         fontSize: 'inherit',
+                        color: 'inherit',
                         width: '100%',
                         '& input': {
                           p: '4px 6px',
-                          border: '1px solid',
-                          borderColor: 'divider',
+                          border: '1px solid transparent',
                           borderRadius: 1,
-                          '&:focus': { borderColor: 'primary.main', outline: 'none' },
+                          transition: 'border-color 120ms ease, background-color 120ms ease',
+                          '&:hover': { borderColor: tokens.borderStrong },
+                          '&:focus': {
+                            borderColor: tokens.accentBorder,
+                            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                            outline: 'none',
+                          },
                         },
                       }}
                     />
@@ -155,29 +178,52 @@ export default function JeopardyTable({ isAdmin = false, onQuestionOpen }: Jeopa
                   // Admin: can open any non-closed cell (including empty to create).
                   const isDisabled = isClosed || !isAdmin;
 
+                  const isEmptyAddCell = isAdmin && hasNoQuestion && !isClosed;
+
                   return (
                     <TableCell
                       key={questionKey}
                       align="center"
                       sx={{
                         verticalAlign: 'middle',
-                        opacity: !isAdmin && hasNoQuestion ? 0.35 : 1,
                         cursor: isDisabled ? 'default' : 'pointer',
                         userSelect: 'none',
                         height: 64,
                         py: 1,
-                        backgroundColor: isAnsweredCorrectly
-                          ? '#388e3c'
+                        transition:
+                          'background-color 140ms ease, box-shadow 140ms ease, transform 140ms ease',
+                        // Tile surfaces: closed tiles recede, live tiles read as game pieces
+                        backgroundColor: isClosed
+                          ? tokens.sunken
+                          : isEmptyAddCell
+                            ? 'transparent'
+                            : hasNoQuestion
+                              ? tokens.sunken
+                              : tokens.surface,
+                        // Status shown as thin accent borders, never full fills
+                        boxShadow: isAnsweredCorrectly
+                          ? `inset 0 0 0 1px rgba(63, 181, 107, 0.45)`
                           : isAnsweredFailed
-                            ? '#c62828'
+                            ? `inset 0 0 0 1px rgba(245, 50, 63, 0.4)`
                             : isAuctioned
-                              ? 'rgba(255, 193, 7, 0.15)'
-                              : 'inherit',
-                        color: isClosed ? '#fff' : 'inherit',
-                        ...(isAdmin &&
-                          hasNoQuestion &&
-                          !isClosed && {
-                            color: 'text.disabled',
+                              ? `inset 0 0 0 1px rgba(224, 163, 46, 0.5)`
+                              : 'none',
+                        ...(isEmptyAddCell && {
+                          border: `1px dashed rgba(255, 255, 255, 0.12)`,
+                          color: tokens.textMuted,
+                          '&:hover': {
+                            borderColor: tokens.accentBorder,
+                            color: tokens.accentBright,
+                            backgroundColor: tokens.accentTint,
+                          },
+                        }),
+                        ...(!isDisabled &&
+                          !isEmptyAddCell && {
+                            '&:hover': {
+                              backgroundColor: tokens.elevated,
+                              boxShadow: `inset 0 0 0 1px ${tokens.accentBorder}, 0 0 16px rgba(224, 30, 43, 0.18)`,
+                              transform: 'translateY(-1px)',
+                            },
                           }),
                       }}
                       onClick={() => {
@@ -192,20 +238,51 @@ export default function JeopardyTable({ isAdmin = false, onQuestionOpen }: Jeopa
                         onQuestionOpen?.(dialogData);
                       }}
                     >
-                      {isAdmin && hasNoQuestion && !isClosed ? (
+                      {isClosed ? (
                         <Box
                           component="span"
+                          aria-label={
+                            isAnsweredCorrectly ? 'answered correctly' : 'answered incorrectly'
+                          }
                           sx={{
-                            fontSize: 16,
-                            fontWeight: 300,
-                            color: 'text.disabled',
+                            fontSize: '0.85rem',
+                            fontWeight: 700,
+                            color: isAnsweredCorrectly ? tokens.green : tokens.accentBright,
+                            opacity: 0.75,
                             lineHeight: 1,
                           }}
                         >
-                          +
+                          {isAnsweredCorrectly ? '✓' : '✗'}
+                        </Box>
+                      ) : isEmptyAddCell ? (
+                        <Box
+                          component="span"
+                          sx={{
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.06em',
+                            color: 'inherit',
+                            lineHeight: 1,
+                          }}
+                        >
+                          + Add question
                         </Box>
                       ) : (
-                        (cellQuestion?.price ?? '')
+                        cellQuestion && (
+                          <Box
+                            component="span"
+                            sx={{
+                              fontFamily: displayFont,
+                              fontWeight: 700,
+                              fontSize: '1.2rem',
+                              color: tokens.textPrimary,
+                              lineHeight: 1,
+                            }}
+                          >
+                            ${cellQuestion.price}
+                          </Box>
+                        )
                       )}
                     </TableCell>
                   );
@@ -217,12 +294,8 @@ export default function JeopardyTable({ isAdmin = false, onQuestionOpen }: Jeopa
       </TableContainer>
 
       {isAdmin && (
-        <Box sx={{ mt: 1 }}>
-          <Button
-            variant="outlined"
-            onClick={() => void createCategory()}
-            sx={{ borderStyle: 'dashed' }}
-          >
+        <Box sx={{ mt: 1.5 }}>
+          <Button variant="outlined" size="small" onClick={() => void createCategory()}>
             + Add category
           </Button>
         </Box>

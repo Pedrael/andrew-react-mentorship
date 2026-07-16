@@ -3,6 +3,7 @@ import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { displayFont, tokens } from '../../theme';
 import type { AuctionPanelProps } from './types';
 
 export default function AuctionPanel({
@@ -14,25 +15,36 @@ export default function AuctionPanel({
   onAuctionWrong,
   onEndAuctionWithoutBids,
 }: AuctionPanelProps) {
-  const {
-    selectorPlayer,
-    auctionPlayers,
-    activeBidders,
-    currentBidder,
-    bids,
-    wrongIds,
-    maxBid,
-  } = auction;
+  const { selectorPlayer, auctionPlayers, activeBidders, currentBidder, bids, wrongIds, maxBid } =
+    auction;
 
   return (
-    <Box>
-      <Typography variant="caption" color="warning.main" sx={{ display: 'block', mb: 1 }}>
+    <Box
+      sx={{
+        borderTop: `1px solid ${tokens.border}`,
+        pt: 2,
+      }}
+    >
+      <Typography
+        variant="caption"
+        sx={{
+          display: 'block',
+          mb: 1.5,
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          color: tokens.amber,
+        }}
+      >
         ✗&nbsp;{selectorPlayer?.name ?? 'Player'} failed — auction open (max bid ${maxBid})
       </Typography>
 
       {isAdmin ? (
         <>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+          <Typography
+            variant="caption"
+            sx={{ display: 'block', mb: 1, color: tokens.textSecondary }}
+          >
             Enter bids for participating players (highest bid answers first).
           </Typography>
 
@@ -40,11 +52,14 @@ export default function AuctionPanel({
             const bid = bids[player.id] ?? '';
             const answeredWrong = wrongIds.has(player.id);
             return (
-              <Box
-                key={player.id}
-                sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}
-              >
-                <Typography variant="body2" sx={{ minWidth: 120 }}>
+              <Box key={player.id} sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    minWidth: 120,
+                    color: answeredWrong ? tokens.textMuted : tokens.textPrimary,
+                  }}
+                >
                   {player.name}
                   {answeredWrong ? ' (wrong)' : ''}
                 </Typography>
@@ -72,11 +87,24 @@ export default function AuctionPanel({
             const answeredWrong = wrongIds.has(player.id);
             return (
               <Box key={player.id} sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-                <Typography variant="body2" sx={{ minWidth: 120 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    minWidth: 120,
+                    color: answeredWrong ? tokens.textMuted : tokens.textPrimary,
+                  }}
+                >
                   {player.name}
                   {answeredWrong ? ' (wrong)' : ''}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontFamily: displayFont,
+                    fontWeight: 700,
+                    color: bid > 0 ? tokens.textPrimary : tokens.textMuted,
+                  }}
+                >
                   {bid > 0 ? `$${bid}` : '—'}
                 </Typography>
               </Box>
@@ -86,28 +114,53 @@ export default function AuctionPanel({
 
       {activeBidders.length > 0 && (
         <>
-          <Divider sx={{ my: 1 }} />
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+          <Divider sx={{ my: 1.5 }} />
+          <Typography
+            variant="caption"
+            sx={{
+              display: 'block',
+              mb: 1,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              color: tokens.textMuted,
+            }}
+          >
             Answer order (highest bid first)
           </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
-            {activeBidders.map((player, index) => (
-              <Typography
-                key={player.id}
-                variant="caption"
-                sx={{
-                  color: wrongIds.has(player.id)
-                    ? 'error.main'
-                    : player.id === currentBidder?.id
-                      ? 'primary.main'
-                      : 'text.secondary',
-                  fontWeight: player.id === currentBidder?.id ? 700 : 400,
-                }}
-              >
-                {index + 1}. {player.name} (${bids[player.id]})
-                {wrongIds.has(player.id) ? ' ✗' : ''}
-              </Typography>
-            ))}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+            {activeBidders.map((player, index) => {
+              const isCurrent = player.id === currentBidder?.id;
+              const isWrong = wrongIds.has(player.id);
+              return (
+                <Typography
+                  key={player.id}
+                  variant="caption"
+                  sx={{
+                    px: 1.25,
+                    py: 0.5,
+                    borderRadius: 999,
+                    lineHeight: 1.2,
+                    border: `1px solid ${
+                      isWrong
+                        ? 'rgba(245, 50, 63, 0.4)'
+                        : isCurrent
+                          ? tokens.accentBorder
+                          : tokens.border
+                    }`,
+                    backgroundColor: isCurrent ? tokens.accentTint : tokens.surface,
+                    color: isWrong
+                      ? tokens.accentBright
+                      : isCurrent
+                        ? tokens.textPrimary
+                        : tokens.textSecondary,
+                    fontWeight: isCurrent ? 700 : 500,
+                  }}
+                >
+                  {index + 1}. {player.name} (${bids[player.id]}){isWrong ? ' ✗' : ''}
+                </Typography>
+              );
+            })}
           </Box>
         </>
       )}
@@ -135,7 +188,10 @@ export default function AuctionPanel({
 
       {isAdmin && activeBidders.length === 0 && !isRevealingAnswer && (
         <Box sx={{ mt: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+          <Typography
+            variant="caption"
+            sx={{ display: 'block', mb: 1, color: tokens.textSecondary }}
+          >
             No bids yet.
           </Typography>
           <Button variant="outlined" size="small" onClick={onEndAuctionWithoutBids}>
@@ -145,7 +201,7 @@ export default function AuctionPanel({
       )}
 
       {!isAdmin && activeBidders.length === 0 && !isRevealingAnswer && (
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+        <Typography variant="caption" sx={{ display: 'block', mt: 1, color: tokens.textSecondary }}>
           No bids yet.
         </Typography>
       )}

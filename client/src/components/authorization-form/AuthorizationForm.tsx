@@ -62,7 +62,16 @@ export default function AuthorizationForm({
   };
 
   return (
-    <Paper elevation={2} sx={{ maxWidth: 360, mx: 'auto', p: 3 }}>
+    <Paper
+      sx={{
+        width: '100%',
+        maxWidth: 380,
+        p: 3.5,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: '14px',
+      }}
+    >
       <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate autoComplete="on">
         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
           {title}
