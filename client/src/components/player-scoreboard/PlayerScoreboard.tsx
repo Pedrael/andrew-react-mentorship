@@ -27,6 +27,7 @@ export default function PlayerScoreboard() {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {sorted.map((player, index) => {
           const isLeader = index === 0 && player.score > 0;
+          const isCurrentTurn = Boolean(player.isSelected);
 
           return (
             <Box
@@ -38,9 +39,19 @@ export default function PlayerScoreboard() {
                 px: 1.5,
                 py: 1.25,
                 borderRadius: '10px',
-                border: `1px solid ${tokens.border}`,
-                backgroundColor: isLeader ? tokens.elevated : tokens.surface,
-                borderLeft: isLeader ? `3px solid ${tokens.accent}` : `3px solid transparent`,
+                border: isCurrentTurn
+                  ? `1px solid ${tokens.accentBorder}`
+                  : `1px solid ${tokens.border}`,
+                backgroundColor: isCurrentTurn
+                  ? tokens.accentTint
+                  : isLeader
+                    ? tokens.elevated
+                    : tokens.surface,
+                borderLeft: isCurrentTurn
+                  ? `3px solid ${tokens.accent}`
+                  : isLeader
+                    ? `3px solid ${tokens.accent}`
+                    : `3px solid transparent`,
                 transition: 'background-color 160ms ease, border-color 160ms ease',
               }}
             >
@@ -59,21 +70,51 @@ export default function PlayerScoreboard() {
                 {index + 1}
               </Typography>
 
-              <Typography
-                component="span"
+              <Box
                 sx={{
                   flex: 1,
                   minWidth: 0,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  fontSize: '0.95rem',
-                  fontWeight: isLeader ? 700 : 500,
-                  color: tokens.textPrimary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
                 }}
               >
-                {player.name}
-              </Typography>
+                <Typography
+                  component="span"
+                  sx={{
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    fontSize: '0.95rem',
+                    fontWeight: isCurrentTurn || isLeader ? 700 : 500,
+                    color: tokens.textPrimary,
+                  }}
+                >
+                  {player.name}
+                </Typography>
+
+                {isCurrentTurn && (
+                  <Typography
+                    component="span"
+                    sx={{
+                      flexShrink: 0,
+                      fontSize: '0.6rem',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      color: tokens.accentBright,
+                      border: `1px solid ${tokens.accentBorder}`,
+                      borderRadius: '999px',
+                      px: 0.75,
+                      py: 0.25,
+                      lineHeight: 1,
+                    }}
+                  >
+                    Turn
+                  </Typography>
+                )}
+              </Box>
 
               <Typography
                 component="span"

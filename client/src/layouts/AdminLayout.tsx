@@ -109,11 +109,10 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (status !== 'open') return;
-    const payload: PlayersUpdatePayload = players.map(({ id, name, score }) => ({
-      id,
-      name,
-      score,
-    }));
+    const payload: PlayersUpdatePayload = {
+      players: players.map(({ id, name, score }) => ({ id, name, score })),
+      selectedPlayerId: players.find((p) => p.isSelected)?.id ?? null,
+    };
     send(PLAYERS_UPDATE_EVENT, payload);
   }, [players, status, send]);
 

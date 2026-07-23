@@ -15,7 +15,18 @@ and **players** see them live in their own window.
 - Node 20+
 - npm 10+
 
-## Run the stack
+## Quick start (one click)
+
+- **macOS / Linux**: double-click `mac-start.command` (or run `./mac-start.command`).
+- **Windows**: double-click `windows-start.bat`.
+
+The launcher installs npm packages if they are missing, starts both the server
+(`:8080`) and the Vite client (`:5173`), then opens the **Admin**
+(`http://localhost:5173/admin`) and **Player** (`http://localhost:5173/player`)
+views in your browser. On macOS/Linux press Ctrl+C to stop; on Windows close the
+two spawned terminal windows.
+
+## Run the stack manually
 
 In two terminals:
 

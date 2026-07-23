@@ -35,6 +35,7 @@ import {
   markQuestionAuctioned,
   setAuctionState,
   clearAuctionState,
+  selectPlayer,
 } from '../state/game/gameUi.slice';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080';
@@ -105,7 +106,7 @@ export default function PlayerLayout() {
           dispatch(clearAuctionState());
         }
       } else if (event === PLAYERS_UPDATE_EVENT) {
-        const players = payload as PlayersUpdatePayload;
+        const { players, selectedPlayerId } = payload as PlayersUpdatePayload;
         dispatch(
           playersApi.util.upsertQueryData(
             'getPlayers',
@@ -113,6 +114,7 @@ export default function PlayerLayout() {
             players.map(({ id, name, score }) => ({ id, name, score })),
           ),
         );
+        dispatch(selectPlayer(selectedPlayerId));
       }
     },
     [closeDialog, dispatch],
