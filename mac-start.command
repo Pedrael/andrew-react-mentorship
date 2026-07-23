@@ -16,6 +16,7 @@ cd "$(dirname "$0")" || exit 1
 
 CLIENT_PORT=5173
 CLIENT_URL="http://localhost:${CLIENT_PORT}"
+SERVER_URL="http://localhost:8080"
 
 echo "==> Jeopardy launcher"
 
@@ -30,10 +31,20 @@ if [ ! -d client/node_modules ]; then
   (cd client && npm install) || { echo "client npm install failed"; exit 1; }
 fi
 
-# 2. Start the server.
+# 2. Start the server first and wait until it accepts connections, so the
+#    client never fires auth/API requests at a server that isn't listening yet
+#    (that races the login page into a refresh loop).
 echo "==> Starting server (http/ws on :8080)..."
 (cd server && npm run dev) &
 SERVER_PID=$!
+
+echo "==> Waiting for the server to be ready..."
+for _ in $(seq 1 60); do
+  if curl -s -o /dev/null "$SERVER_URL"; then
+    break
+  fi
+  sleep 0.5
+done
 
 # 3. Start the client on a fixed port so the URLs are predictable.
 echo "==> Starting client (vite on :${CLIENT_PORT})..."
