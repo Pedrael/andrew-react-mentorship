@@ -6,9 +6,20 @@ import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
-import { login, type TokenResponse } from '../../services/auth';
-import type { ApiError } from '../../services/apiClient';
+import { useLoginMutation, type TokenResponse } from '../../state/auth/auth.api';
+import { saveAccessToken } from '../../services/authStorage';
 import ControllableTextField from '../controllable-text-field/ControllableTextField';
+
+function getErrorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'data' in error) {
+    const data = (error as { data?: unknown }).data;
+    if (typeof data === 'object' && data !== null) {
+      const body = data as { error_description?: string; message?: string; error?: string };
+      return body.error_description ?? body.message ?? body.error ?? 'Sign in failed';
+    }
+  }
+  return 'Sign in failed';
+}
 
 type AuthorizationFormProps = {
   onSuccess?: (token: TokenResponse) => void;
@@ -25,12 +36,13 @@ export default function AuthorizationForm({
   title = 'Sign in',
 }: AuthorizationFormProps) {
   const [error, setError] = useState<string | null>(null);
+  const [login, { isLoading: isSubmitting }] = useLoginMutation();
 
   const {
     control,
     handleSubmit,
     resetField,
-    formState: { isSubmitting, isValid },
+    formState: { isValid },
   } = useForm<AuthorizationFormValues>({
     defaultValues: { username: '', password: '' },
     mode: 'onChange',
@@ -39,17 +51,27 @@ export default function AuthorizationForm({
   const onSubmit = async ({ username, password }: AuthorizationFormValues) => {
     setError(null);
     try {
-      const token = await login(username.trim(), password);
+      const token = await login({ username: username.trim(), password }).unwrap();
+      // Persist before navigating so the auth guard sees the token on first try.
+      saveAccessToken(token.access_token);
       resetField('password');
       onSuccess?.(token);
     } catch (err) {
-      const apiError = err as ApiError;
-      setError(apiError?.message ?? 'Sign in failed');
+      setError(getErrorMessage(err));
     }
   };
 
   return (
-    <Paper elevation={2} sx={{ maxWidth: 360, mx: 'auto', p: 3 }}>
+    <Paper
+      sx={{
+        width: '100%',
+        maxWidth: 380,
+        p: 3.5,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: '14px',
+      }}
+    >
       <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate autoComplete="on">
         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
           {title}

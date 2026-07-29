@@ -1,48 +1,70 @@
-import { useCallback, useEffect, useState, type Dispatch } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
+import Box from '@mui/material/Box';
+import GameHeader from '../components/game-header/GameHeader';
 import JeopardyTable from '../components/jeopardy-table/JeopardyTable';
-import QuestionDialog from '../components/question-dialog/QuestionDialog';
-import type { QuestionDialogData } from '../components/question-dialog/QuestionDialog';
-import { useBootstrap } from '../hooks/useBootstrap';
-import { logout } from '../services/auth';
+import QuestionDialogContainer from '../components/question-dialog/QuestionDialogContainer';
+import type { QuestionDialogData } from '../components/question-dialog/types';
+import { logout } from '../services/authStorage';
 import { useWebSocket } from '../lib/websocket/useWebSocket';
 import {
   OPEN_QUESTION_EVENT,
   CLOSE_QUESTION_EVENT,
   REVEAL_ANSWER_EVENT,
   MARK_AUCTIONED_EVENT,
+  AUCTION_UPDATE_EVENT,
   PLAYERS_UPDATE_EVENT,
   UPDATE_QUESTION_EVENT,
   SYNC_CATEGORIES_EVENT,
   type OpenQuestionPayload,
   type RevealAnswerPayload,
   type MarkAuctionedPayload,
+  type AuctionUpdateMessage,
   type PlayersUpdatePayload,
-  type UpdateQuestionPayload,
 } from '../lib/websocket/messages';
-import type { Category, GameAction, GameState } from '../state/RootReducer';
 import PlayerScoreboard from '../components/player-scoreboard/PlayerScoreboard';
+import { useAppDispatch } from '../state/hooks';
+import { categoriesApi } from '../state/categories/categories.api';
+import type { Category } from '../state/categories/categories.types';
+import { useGetCategoriesQuery } from '../state/categories/categories.api';
+import { playersApi, useGetPlayersQuery } from '../state/players/players.api';
+import {
+  markQuestionAnswered,
+  markQuestionFailed,
+  markQuestionAuctioned,
+  setAuctionState,
+  clearAuctionState,
+  selectPlayer,
+} from '../state/game/gameUi.slice';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080';
 
-type PlayerLayoutProps = {
-  state: GameState;
-  dispatch: Dispatch<GameAction>;
-};
+function isUnauthorized(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    (error as FetchBaseQueryError).status === 401
+  );
+}
 
-export default function PlayerLayout({ state, dispatch }: PlayerLayoutProps) {
+export default function PlayerLayout() {
   const navigate = useNavigate();
-  const bootstrap = useBootstrap(dispatch, true);
+  const dispatch = useAppDispatch();
   const [openedQuestion, setOpenedQuestion] = useState<QuestionDialogData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
 
+  const { error: playersError } = useGetPlayersQuery(undefined, { skip: true });
+  const { error: categoriesError } = useGetCategoriesQuery(undefined, { skip: true });
+
   useEffect(() => {
-    if (bootstrap.status === 'unauthorized') {
+    if (isUnauthorized(playersError) || isUnauthorized(categoriesError)) {
       logout();
       navigate('/login', { replace: true });
     }
-  }, [bootstrap.status, navigate]);
+  }, [playersError, categoriesError, navigate]);
 
   const closeDialog = useCallback(() => {
     setIsDialogOpen(false);
@@ -57,23 +79,42 @@ export default function PlayerLayout({ state, dispatch }: PlayerLayoutProps) {
         setIsDialogOpen(true);
       } else if (event === CLOSE_QUESTION_EVENT) {
         closeDialog();
+        dispatch(clearAuctionState());
       } else if (event === REVEAL_ANSWER_EVENT) {
         const { questionKey, outcome = 'correct' } = payload as RevealAnswerPayload;
         if (outcome === 'failed') {
-          dispatch({ type: 'markQuestionFailed', payload: questionKey });
+          dispatch(markQuestionFailed(questionKey));
         } else {
-          dispatch({ type: 'markQuestionAnswered', payload: questionKey });
+          dispatch(markQuestionAnswered(questionKey));
         }
         setShowAnswer(true);
+        dispatch(clearAuctionState());
       } else if (event === UPDATE_QUESTION_EVENT) {
-        setOpenedQuestion(payload as UpdateQuestionPayload);
+        setOpenedQuestion(payload as QuestionDialogData);
       } else if (event === SYNC_CATEGORIES_EVENT) {
-        dispatch({ type: 'syncCategories', payload: payload as Category[] });
+        dispatch(
+          categoriesApi.util.upsertQueryData('getCategories', undefined, payload as Category[]),
+        );
       } else if (event === MARK_AUCTIONED_EVENT) {
         const { questionKey } = payload as MarkAuctionedPayload;
-        dispatch({ type: 'markQuestionAuctioned', payload: questionKey });
+        dispatch(markQuestionAuctioned(questionKey));
+      } else if (event === AUCTION_UPDATE_EVENT) {
+        const auction = payload as AuctionUpdateMessage;
+        if (auction) {
+          dispatch(setAuctionState(auction));
+        } else {
+          dispatch(clearAuctionState());
+        }
       } else if (event === PLAYERS_UPDATE_EVENT) {
-        dispatch({ type: 'syncPlayers', payload: payload as PlayersUpdatePayload });
+        const { players, selectedPlayerId } = payload as PlayersUpdatePayload;
+        dispatch(
+          playersApi.util.upsertQueryData(
+            'getPlayers',
+            undefined,
+            players.map(({ id, name, score }) => ({ id, name, score })),
+          ),
+        );
+        dispatch(selectPlayer(selectedPlayerId));
       }
     },
     [closeDialog, dispatch],
@@ -82,12 +123,17 @@ export default function PlayerLayout({ state, dispatch }: PlayerLayoutProps) {
   useWebSocket({ url: WS_URL, role: 'player', onEvent: handleEvent });
 
   return (
-    <section style={{ padding: 16 }}>
-      <JeopardyTable state={state} dispatch={dispatch} isAdmin={false} />
-      <PlayerScoreboard state={state} />
-      <QuestionDialog
-        state={state}
-        dispatch={dispatch}
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <GameHeader status="Live game" />
+      <Box sx={{ display: 'flex', gap: 2.5, alignItems: 'flex-start', p: 2.5, flex: 1 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <JeopardyTable isAdmin={false} />
+        </Box>
+        <Box sx={{ width: 'clamp(220px, 22vw, 320px)', flexShrink: 0 }}>
+          <PlayerScoreboard />
+        </Box>
+      </Box>
+      <QuestionDialogContainer
         question={openedQuestion}
         isAdmin={false}
         isOpen={isDialogOpen}
@@ -95,6 +141,6 @@ export default function PlayerLayout({ state, dispatch }: PlayerLayoutProps) {
         showAnswer={showAnswer}
         disableBackdropClose
       />
-    </section>
+    </Box>
   );
 }

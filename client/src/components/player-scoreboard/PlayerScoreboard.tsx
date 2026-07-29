@@ -1,32 +1,33 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import type { GameState } from '../../state/RootReducer';
+import { displayFont, tokens } from '../../theme';
+import { useAppSelector } from '../../state/hooks';
+import { selectPlayers } from '../../state/players/players.selectors';
 
-type PlayerScoreboardProps = {
-  state: GameState;
-};
-
-export default function PlayerScoreboard({ state }: PlayerScoreboardProps) {
-  const { players } = state;
-
+export default function PlayerScoreboard() {
+  const players = useAppSelector(selectPlayers);
   const sorted = [...players].sort((a, b) => b.score - a.score);
 
   return (
-    <Box sx={{ mt: 3, maxWidth: 480 }}>
-      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+    <Box sx={{ width: '100%' }}>
+      <Typography
+        component="h2"
+        sx={{
+          fontSize: '0.72rem',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          color: tokens.textMuted,
+          mb: 1.5,
+        }}
+      >
         Scoreboard
       </Typography>
 
-      <Box
-        sx={{
-          border: '1px solid #000',
-          borderRadius: 2,
-          overflow: 'hidden',
-        }}
-      >
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {sorted.map((player, index) => {
-          const isFirst = index === 0 && player.score > 0;
-          const isLast = index === sorted.length - 1;
+          const isLeader = index === 0 && player.score > 0;
+          const isCurrentTurn = Boolean(player.isSelected);
 
           return (
             <Box
@@ -34,19 +35,34 @@ export default function PlayerScoreboard({ state }: PlayerScoreboardProps) {
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 2,
-                px: 2,
-                py: 1.5,
-                borderBottom: isLast ? 'none' : '1px solid #000',
-                backgroundColor: isFirst ? 'rgba(204, 0, 0, 0.06)' : 'inherit',
+                gap: 1.5,
+                px: 1.5,
+                py: 1.25,
+                borderRadius: '10px',
+                border: isCurrentTurn
+                  ? `1px solid ${tokens.accentBorder}`
+                  : `1px solid ${tokens.border}`,
+                backgroundColor: isCurrentTurn
+                  ? tokens.accentTint
+                  : isLeader
+                    ? tokens.elevated
+                    : tokens.surface,
+                borderLeft: isCurrentTurn
+                  ? `3px solid ${tokens.accent}`
+                  : isLeader
+                    ? `3px solid ${tokens.accent}`
+                    : `3px solid transparent`,
+                transition: 'background-color 160ms ease, border-color 160ms ease',
               }}
             >
               <Typography
-                variant="body2"
+                component="span"
                 sx={{
-                  width: 24,
+                  width: 20,
+                  fontFamily: displayFont,
+                  fontSize: '0.8rem',
                   fontWeight: 700,
-                  color: isFirst ? 'primary.main' : 'text.secondary',
+                  color: isLeader ? tokens.accentBright : tokens.textMuted,
                   textAlign: 'center',
                   flexShrink: 0,
                 }}
@@ -54,28 +70,81 @@ export default function PlayerScoreboard({ state }: PlayerScoreboardProps) {
                 {index + 1}
               </Typography>
 
-              <Typography variant="body1" sx={{ flex: 1, fontWeight: isFirst ? 700 : 400 }}>
-                {player.name}
-              </Typography>
-
-              <Typography
-                variant="body1"
+              <Box
                 sx={{
-                  fontWeight: 700,
-                  color: player.score < 0 ? 'error.main' : 'text.primary',
-                  minWidth: 56,
-                  textAlign: 'right',
+                  flex: 1,
+                  minWidth: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
                 }}
               >
-                ${player.score}
+                <Typography
+                  component="span"
+                  sx={{
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    fontSize: '0.95rem',
+                    fontWeight: isCurrentTurn || isLeader ? 700 : 500,
+                    color: tokens.textPrimary,
+                  }}
+                >
+                  {player.name}
+                </Typography>
+
+                {isCurrentTurn && (
+                  <Typography
+                    component="span"
+                    sx={{
+                      flexShrink: 0,
+                      fontSize: '0.6rem',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      color: tokens.accentBright,
+                      border: `1px solid ${tokens.accentBorder}`,
+                      borderRadius: '999px',
+                      px: 0.75,
+                      py: 0.25,
+                      lineHeight: 1,
+                    }}
+                  >
+                    Turn
+                  </Typography>
+                )}
+              </Box>
+
+              <Typography
+                component="span"
+                sx={{
+                  fontFamily: displayFont,
+                  fontSize: '1.05rem',
+                  fontWeight: 700,
+                  color: player.score < 0 ? tokens.accentBright : tokens.textPrimary,
+                  minWidth: 56,
+                  textAlign: 'right',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {player.score < 0 ? `−$${Math.abs(player.score)}` : `$${player.score}`}
               </Typography>
             </Box>
           );
         })}
 
         {players.length === 0 && (
-          <Box sx={{ px: 2, py: 2, textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
+          <Box
+            sx={{
+              px: 2,
+              py: 2.5,
+              textAlign: 'center',
+              borderRadius: '10px',
+              border: `1px dashed rgba(255, 255, 255, 0.12)`,
+            }}
+          >
+            <Typography variant="body2" sx={{ color: tokens.textMuted }}>
               Waiting for players…
             </Typography>
           </Box>

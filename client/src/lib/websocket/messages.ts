@@ -27,6 +27,7 @@ export type ServerMessage = EventMessage | SystemMessage;
 export const OPEN_QUESTION_EVENT = 'open_question';
 
 export interface OpenQuestionPayload {
+  categoryId: string;
   category: string;
   question: string;
   price: number;
@@ -51,6 +52,17 @@ export interface MarkAuctionedPayload {
   questionKey: string;
 }
 
+export const AUCTION_UPDATE_EVENT = 'auction_update';
+
+export interface AuctionUpdatePayload {
+  questionKey: string;
+  selectorPlayerId: string;
+  bids: Record<string, number>;
+  wrongPlayerIds: string[];
+}
+
+export type AuctionUpdateMessage = AuctionUpdatePayload | null;
+
 export const PLAYERS_UPDATE_EVENT = 'players_update';
 
 export interface PlayerScore {
@@ -64,6 +76,7 @@ export type PlayersUpdatePayload = PlayerScore[];
 export const UPDATE_QUESTION_EVENT = 'update_question';
 
 export interface UpdateQuestionPayload {
+  categoryId: string;
   category: string;
   price: number;
   question: string;

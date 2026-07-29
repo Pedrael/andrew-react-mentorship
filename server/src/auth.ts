@@ -5,6 +5,7 @@ import type { IncomingMessage } from 'node:http';
 import { DATA_DIR } from './store.js';
 
 const USERS_PATH = join(DATA_DIR, 'users.json');
+const SESSIONS_PATH = join(DATA_DIR, 'sessions.json');
 
 const KEY_LEN = 32;
 const SALT_LEN = 16;
@@ -54,10 +55,69 @@ type Session = {
 
 const sessions = new Map<string, Session>();
 
-export function issueAccessToken(username: string): { accessToken: string; expiresIn: number } {
+// Serialize session-file writes so concurrent logins don't clobber each other.
+let sessionsWriteTail: Promise<void> = Promise.resolve();
+
+function persistSessions(): Promise<void> {
+  const snapshot = Object.fromEntries(sessions);
+  const write = sessionsWriteTail.then(async () => {
+    await mkdir(DATA_DIR, { recursive: true });
+    await writeFile(SESSIONS_PATH, JSON.stringify(snapshot, null, 2) + '\n', 'utf8');
+  });
+  sessionsWriteTail = write.then(
+    () => undefined,
+    () => undefined,
+  );
+  return write;
+}
+
+/**
+ * Load persisted sessions into memory (skipping any that have expired) so
+ * access tokens survive a server restart. Call once at startup.
+ */
+export async function loadSessions(): Promise<void> {
+  let raw: string;
+  try {
+    raw = await readFile(SESSIONS_PATH, 'utf8');
+  } catch (err: unknown) {
+    const code =
+      err && typeof err === 'object' && 'code' in err
+        ? (err as NodeJS.ErrnoException).code
+        : undefined;
+    if (code === 'ENOENT') return;
+    throw err;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return;
+
+  const now = Date.now();
+  let pruned = false;
+  for (const [token, value] of Object.entries(parsed as Record<string, unknown>)) {
+    if (!value || typeof value !== 'object') continue;
+    const { username, expiresAt } = value as Partial<Session>;
+    if (typeof username !== 'string' || typeof expiresAt !== 'number') continue;
+    if (now > expiresAt) {
+      pruned = true;
+      continue;
+    }
+    sessions.set(token, { username, expiresAt });
+  }
+  if (pruned) await persistSessions();
+}
+
+export async function issueAccessToken(
+  username: string,
+): Promise<{ accessToken: string; expiresIn: number }> {
   const accessToken = randomBytes(TOKEN_BYTES).toString('hex');
   const expiresAt = Date.now() + tokenTtlMs;
   sessions.set(accessToken, { username, expiresAt });
+  await persistSessions();
   return { accessToken, expiresIn: Math.floor(tokenTtlMs / 1000) };
 }
 
@@ -66,6 +126,7 @@ export function validateAccessToken(accessToken: string): boolean {
   if (!s) return false;
   if (Date.now() > s.expiresAt) {
     sessions.delete(accessToken);
+    void persistSessions();
     return false;
   }
   return true;

@@ -5,31 +5,27 @@ import FormLabel from '@mui/material/FormLabel';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import Typography from '@mui/material/Typography';
-import { type ChangeEvent, type Dispatch } from 'react';
+import { type ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
-import type { GameAction, GameState } from '../../state/RootReducer';
-import type { GameActions } from '../../hooks/useGameActions';
 import ControllableTextField from '../controllable-text-field/ControllableTextField';
-
-type PlayerManagementFormProps = {
-  state: GameState;
-  dispatch: Dispatch<GameAction>;
-  actions: GameActions;
-};
+import { displayFont, tokens } from '../../theme';
+import { useAppDispatch, useAppSelector } from '../../state/hooks';
+import { selectPlayers } from '../../state/players/players.selectors';
+import { useCreatePlayerMutation, useDeletePlayerMutation } from '../../state/players/players.api';
+import { clearSelectedPlayerIfDeleted, selectPlayer } from '../../state/game/gameUi.slice';
 
 type AddPlayerFormValues = {
   playerName: string;
 };
 
-export default function PlayerManagementForm({
-  state,
-  dispatch,
-  actions,
-}: PlayerManagementFormProps) {
-  const { players } = state;
+export default function PlayerManagementForm() {
+  const dispatch = useAppDispatch();
+  const players = useAppSelector(selectPlayers);
+  const [createPlayer, { isLoading: isCreating }] = useCreatePlayerMutation();
+  const [deletePlayer] = useDeletePlayerMutation();
 
   const {
     control,
@@ -43,72 +39,135 @@ export default function PlayerManagementForm({
   const selectedPlayerId = players.find((player) => player.isSelected)?.id ?? '';
 
   const handleChange = (_event: ChangeEvent<HTMLInputElement>, value: string) => {
-    dispatch({ type: 'selectPlayer', payload: value });
+    dispatch(selectPlayer(value));
   };
 
   const onAddPlayer = async ({ playerName }: AddPlayerFormValues) => {
-    await actions.addPlayer(playerName.trim());
+    const trimmed = playerName.trim();
+    if (!trimmed) return;
+    await createPlayer({ name: trimmed });
     reset();
   };
 
-  const handleDeletePlayer = (playerId: string) => {
-    void actions.deletePlayer(playerId);
+  const handleDeletePlayer = async (playerId: string) => {
+    dispatch(clearSelectedPlayerIfDeleted(playerId));
+    await deletePlayer(playerId);
   };
 
   return (
     <Box component="form" onSubmit={handleSubmit(onAddPlayer)} noValidate autoComplete="off">
       <FormControl fullWidth>
-        <FormLabel id="player-management-label">Players</FormLabel>
+        <FormLabel
+          id="player-management-label"
+          sx={{
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            color: tokens.textMuted,
+            mb: 1.5,
+          }}
+        >
+          Players
+        </FormLabel>
         <RadioGroup
           aria-labelledby="player-management-label"
           name="player-management"
           value={selectedPlayerId}
           onChange={handleChange}
         >
-          <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {players.map((player) => (
               <Box
                 key={player.id}
                 sx={{
-                  border: 1,
-                  borderColor: player.isSelected ? 'primary.main' : '#000',
-                  borderRadius: 1,
-                  px: 1.5,
-                  py: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 0.5,
+                  pl: 0.5,
+                  pr: 0.5,
+                  py: 0.25,
+                  borderRadius: '10px',
+                  border: `1px solid ${player.isSelected ? tokens.accentBorder : tokens.border}`,
+                  backgroundColor: player.isSelected ? tokens.accentTint : tokens.surface,
+                  transition: 'background-color 140ms ease, border-color 140ms ease',
                 }}
               >
                 <FormControlLabel
                   value={player.id}
-                  control={<Radio />}
+                  control={<Radio size="small" />}
+                  sx={{ flex: 1, minWidth: 0, mr: 0 }}
                   label={
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                      <Typography>{player.name}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Score: {player.score}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        gap: 1,
+                        alignItems: 'baseline',
+                        minWidth: 0,
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          fontWeight: player.isSelected ? 700 : 500,
+                          fontSize: '0.9rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {player.name}
+                      </Typography>
+                      <Typography
+                        component="span"
+                        sx={{
+                          fontFamily: displayFont,
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          color: player.score < 0 ? tokens.accentBright : tokens.textSecondary,
+                          fontVariantNumeric: 'tabular-nums',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {player.score < 0 ? `−$${Math.abs(player.score)}` : `$${player.score}`}
                       </Typography>
                     </Box>
                   }
                 />
-                <IconButton onClick={() => handleDeletePlayer(player.id)}>
-                  <ClearIcon />
+                <IconButton
+                  size="small"
+                  aria-label={`remove ${player.name}`}
+                  onClick={() => void handleDeletePlayer(player.id)}
+                >
+                  <ClearIcon fontSize="small" />
                 </IconButton>
               </Box>
             ))}
-            <ControllableTextField
-              name="playerName"
-              control={control}
-              rules={{
-                required: 'Player name is required',
-                validate: (value) =>
-                  value.trim().length > 0 || 'Player name is required',
-              }}
-              id="playerName"
-              type="text"
-              disabled={isSubmitting}
-            />
-            <Button type="submit" variant="contained" disabled={isSubmitting}>
-              Add
-            </Button>
+
+            <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+              <ControllableTextField
+                name="playerName"
+                control={control}
+                rules={{
+                  required: 'Player name is required',
+                  validate: (value) => value.trim().length > 0 || 'Player name is required',
+                }}
+                id="playerName"
+                type="text"
+                size="small"
+                placeholder="Player name"
+                disabled={isSubmitting || isCreating}
+                sx={{ flex: 1 }}
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={isSubmitting || isCreating}
+                sx={{ flexShrink: 0, alignSelf: 'flex-start' }}
+              >
+                Add
+              </Button>
+            </Box>
           </Box>
         </RadioGroup>
       </FormControl>

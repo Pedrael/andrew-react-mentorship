@@ -10,6 +10,10 @@ lerna-debug.log*
 # Dependencies
 node_modules
 
+# Server runtime data (auto-created on boot)
+/server/data/*.json
+
+docs/*
 # Build output
 dist
 dist-ssr
