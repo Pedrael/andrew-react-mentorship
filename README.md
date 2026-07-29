@@ -26,6 +26,16 @@ The launcher installs npm packages if they are missing, starts both the server
 views in your browser. On macOS/Linux press Ctrl+C to stop; on Windows close the
 two spawned terminal windows.
 
+## Reset the game (one click)
+
+- **macOS / Linux**: double-click `mac-reset.command` (or run `./mac-reset.command`).
+- **Windows**: double-click `windows-reset.bat`.
+
+This wipes the board (`categories.json`) and players (`players.json`) back to an
+empty slate and restarts the server. It leaves the admin account and login
+session intact, so you stay logged in. After it finishes, refresh your Admin and
+Player browser tabs to see the blank board.
+
 ## Run the stack manually
 
 In two terminals:
